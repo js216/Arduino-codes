@@ -36,9 +36,13 @@ void serialEvent()
         break;
 
       case 'w':
-        char reg = 0x01;
-        char data[] = {B00000000, B01000000, B00001000, B00111111};
+        char reg = 0x02;
+        char data[] = {B00011111, B00111111, B11000000, B00000000};
         write_register(reg, data);
+        char reg2 = 0x0E;
+        char data2[] = {B00001000, B10110101, B00000000, B00000000,
+                       B00010101, B11000010, B10001111, B01011100};
+        write_register(reg2, data2);
         break;
     }
   }
@@ -106,7 +110,7 @@ void write_register(char reg, char data[])
 
   // transfer data
   SPI.transfer(reg & B01111111);
-  for (int i=0; i<reg_len[i]; i++) {
+  for (int i=0; i<reg_len[reg]; i++) {
     printBits(data[i]);
     Serial.print(",");
 
