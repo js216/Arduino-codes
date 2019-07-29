@@ -24,7 +24,7 @@ void loop()
       GPIOD_PDOR = i;
       for (int j=0; j<256; ++j) {
         GPIOC_PDOR = j;
-        delay(10);
+        delay(100);
       }
     }
   }
