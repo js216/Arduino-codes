@@ -65,7 +65,9 @@ void read_register(int reg)
 {
   // register sanity check
   if (reg >= 23) {
-    Serial.print("Invalid register!");
+    Serial.print("Invalid register: ");
+    Serial.print(reg, HEX);
+    Serial.print("\n");
     return;
   }
   
@@ -94,7 +96,6 @@ void read_all_registers()
     Serial.print(": ");
     read_register(reg);
     for (int i=0; i<reg_len[reg]; i++) {
-//      Serial.print(result[i], BIN);
       printBits(result[i]);
       Serial.print(",");
     }
@@ -106,7 +107,9 @@ void write_register(char reg, char data[])
 {
   // register sanity check
   if (reg >= 23) {
-    Serial.print("Invalid register!\n");
+    Serial.print("Invalid register: ");
+    Serial.print(reg, HEX);
+    Serial.print("\n");
     return;
   }
 
@@ -124,7 +127,7 @@ void write_register(char reg, char data[])
     Serial.print(",");
 
     // do the SPI transfer
-//    result[i] = SPI.transfer(data[i]);
+    result[i] = SPI.transfer(data[i]);
     
     // transfer data from IO buffers to internal registers
     digitalWrite(IO_update_pin, HIGH);
