@@ -27,24 +27,13 @@ void serialEvent()
     char cmd = Serial.read();
 
     switch (cmd) { 
-      // read all registers
       case 'r':
         read_all_registers();
         break;
 
-      // write register
       case 'w':
-        // determine what register to write to
-        char reg = Serial.read() - 48;
-        Serial.print(reg_len[reg]);
-        return;
-
-        // read data to be written to the register
-        char data[reg_len[reg]];
-        for (int i=0; i<reg_len[reg]; i++)
-          data[i] = Serial.read();
-
-        // write to SPI
+        char reg = 0x01;
+        char data[] = {B00000000, B01000000, B00000000, B00000000};
         write_register(reg, data);
         break;
     }
@@ -55,12 +44,12 @@ void loop()
 {
 }
 
-void read_register(char reg)
+void read_register(int reg)
 {
   // register sanity check
   if (reg >= 23) {
     Serial.print("Invalid register!");
-    return -1;
+    return;
   }
   
   // begin transaction
@@ -99,24 +88,24 @@ void read_all_registers()
 void write_register(char reg, char data[])
 {
   // register sanity check
-  Serial.print("Writing to register ");
-  Serial.print(reg, HEX);
-  Serial.print(":   \n");
   if (reg >= 23) {
     Serial.print("Invalid register!\n");
-    return -1;
+    return;
   }
 
   // begin transaction
+  Serial.print("Writing to register ");
+  Serial.print(reg, HEX);
+  Serial.print(":   \n  ");
   SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
   digitalWrite(CS_pin, LOW);
 
   // transfer data
   SPI.transfer(reg | B00000000);
   for (int i=0; i<reg_len[i]; i++) {
-    Serial.print(data[i], BIN);
+    printBits(data[i]);
     Serial.print(",");
-//    result[i] = SPI.transfer(data[i]);
+    result[i] = SPI.transfer(data[i]);
   }
   Serial.print("\n");
 
@@ -124,6 +113,10 @@ void write_register(char reg, char data[])
   digitalWrite(CS_pin, HIGH);
   SPI.endTransaction();
 }
+
+/* ============================
+ * AUXILIARY FUNCTIONS
+   ============================ */
 
 void printBits(byte myByte){
  for(byte mask = 0x80; mask; mask >>= 1){
