@@ -35,7 +35,9 @@ void serialEvent()
       // write register
       case 'w':
         // determine what register to write to
-        char reg = Serial.read();
+        char reg = Serial.read() - 48;
+        Serial.print(reg_len[reg]);
+        return;
 
         // read data to be written to the register
         char data[reg_len[reg]];
