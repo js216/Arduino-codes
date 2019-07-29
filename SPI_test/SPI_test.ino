@@ -36,9 +36,18 @@ void serialEvent()
         break;
 
       case 'w':
-        char reg = 0x02;
-        char data[] = {B00011111, B00111111, B11000000, B00000000};
+        char reg = Serial.read();
+        char data[reg_len[reg]];
+        for (int i=0; i<reg_len[reg]; i++)
+           data[i] = Serial.read();
         write_register(reg, data);
+        break;
+        
+      // default settings: 85MHz output (for 1GHz clock)
+      case 'd':
+        char reg1 = 0x02;
+        char data1[] = {B00011111, B00111111, B11000000, B00000000};
+        write_register(reg1, data1);
         char reg2 = 0x0E;
         char data2[] = {B00001000, B10110101, B00000000, B00000000,
                        B00010101, B11000010, B10001111, B01011100};
@@ -115,7 +124,7 @@ void write_register(char reg, char data[])
     Serial.print(",");
 
     // do the SPI transfer
-    result[i] = SPI.transfer(data[i]);
+//    result[i] = SPI.transfer(data[i]);
     
     // transfer data from IO buffers to internal registers
     digitalWrite(IO_update_pin, HIGH);
