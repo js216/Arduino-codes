@@ -1,5 +1,6 @@
  #include <SPI.h>
 
+// length of AD9910 internal registers
 const int reg_len[] = {4,4,4,4,4,6,6,4,2,4,4,8,8,4,8,8,8,8,8,8,8,8,4};
 
 // SS = Select Device = pin 10
@@ -19,6 +20,9 @@ void setup()
   // CS is active-low
   pinMode(CS_pin, OUTPUT);
   digitalWrite(CS_pin, HIGH);
+
+  pinMode(IO_update_pin, OUTPUT);
+  digitalWrite(IO_update_pin, LOW);
 }
 
 void serialEvent()
@@ -33,7 +37,7 @@ void serialEvent()
 
       case 'w':
         char reg = 0x01;
-        char data[] = {B00000000, B01000000, B00000000, B00000000};
+        char data[] = {B00000000, B01000000, B00001000, B00111111};
         write_register(reg, data);
         break;
     }
@@ -101,11 +105,18 @@ void write_register(char reg, char data[])
   digitalWrite(CS_pin, LOW);
 
   // transfer data
-  SPI.transfer(reg | B00000000);
+  SPI.transfer(reg & B01111111);
   for (int i=0; i<reg_len[i]; i++) {
     printBits(data[i]);
     Serial.print(",");
+
+    // do the SPI transfer
     result[i] = SPI.transfer(data[i]);
+    
+    // transfer data from IO buffers to internal registers
+    digitalWrite(IO_update_pin, HIGH);
+    delay(10);
+    digitalWrite(IO_update_pin, LOW);
   }
   Serial.print("\n");
 
