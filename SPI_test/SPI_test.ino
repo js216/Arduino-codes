@@ -9,6 +9,7 @@ const int reg_len[] = {4,4,4,4,4,6,6,4,2,4,4,8,8,4,8,8,8,8,8,8,8,8,4};
 // MISO = Data Input = pin 12
 const int CS_pin = 16;
 const int IO_update_pin = 24;
+const int reset_pin = 2;
 
 unsigned int result[8];
 
@@ -23,6 +24,9 @@ void setup()
 
   pinMode(IO_update_pin, OUTPUT);
   digitalWrite(IO_update_pin, LOW);
+
+  pinMode(reset_pin, OUTPUT);
+  digitalWrite(reset_pin, LOW);
 }
 
 void serialEvent()
@@ -35,23 +39,19 @@ void serialEvent()
         read_all_registers();
         break;
 
+      case '0':
+        digitalWrite(reset_pin, HIGH);
+        delay(100);
+        digitalWrite(reset_pin, LOW);
+        Serial.print("Device reset complete.\n");
+        break;
+
       case 'w':
         char reg = Serial.read();
         char data[reg_len[reg]];
         for (int i=0; i<reg_len[reg]; i++)
            data[i] = Serial.read();
         write_register(reg, data);
-        break;
-        
-      // default settings: 85MHz output (for 1GHz clock)
-      case 'd':
-        char reg1 = 0x02;
-        char data1[] = {B00011111, B00111111, B11000000, B00000000};
-        write_register(reg1, data1);
-        char reg2 = 0x0E;
-        char data2[] = {B00001000, B10110101, B00000000, B00000000,
-                       B00010101, B11000010, B10001111, B01011100};
-        write_register(reg2, data2);
         break;
     }
   }
