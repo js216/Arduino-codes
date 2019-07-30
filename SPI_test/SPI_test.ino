@@ -3,7 +3,6 @@
 // length of AD9910 internal registers
 const int reg_len[] = {4,4,4,4,4,6,6,4,2,4,4,8,8,4,8,8,8,8,8,8,8,8,4};
 
-// SS = Select Device = pin 10
 // SCK = Clock = pin 13
 // MOSI = Data Output = pin 11
 // MISO = Data Input = pin 12
