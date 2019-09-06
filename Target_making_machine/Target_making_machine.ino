@@ -1,30 +1,40 @@
 #include <SPI.h>
 
+// for SPI communication with MAX31856 devices
 const int CS0 = 16;
 const int CS1 = 17;
 const int DRDY0 = 22;
 const int DRDY1 = 20;
 const int FAULT0 = 23;
 const int FAULT1 = 21;
-
 const int SPI_speed = 5000*1000;
 const int SPI_MODE = SPI_MODE3;
+
+// for controlling the CPC40055ST relays
+const int RELAY0 = 2;
+const int RELAY1 = 3;
 
 void setup() {
   Serial.begin(115200);
   SPI.begin();
 
-  // initalize the  data ready, chip select and fault pins
+  // initalize the data ready, chip select, fault, and relay pins
   pinMode(CS0, OUTPUT);
   pinMode(CS1, OUTPUT);
   pinMode(DRDY0, INPUT);
   pinMode(DRDY1, INPUT);
   pinMode(FAULT0, INPUT);
   pinMode(FAULT1, INPUT);
+  pinMode(RELAY0, OUTPUT);
+  pinMode(RELAY1, OUTPUT);
 
   // set the active-low chip-select pins to high
   digitalWrite(CS0, HIGH);
   digitalWrite(CS1, HIGH);
+
+  // default relays to closed
+  digitalWrite(RELAY0, LOW);
+  digitalWrite(RELAY1, LOW);
 }
 
 void loop() {
@@ -71,6 +81,22 @@ void serialEvent()
       // check for fault conditions
       case 'f':
         fault_check();
+        break;
+
+      // relay on
+      case 'r':
+        digitalWrite(RELAY0, HIGH);
+        break;
+      case 'R':
+        digitalWrite(RELAY1, HIGH);
+        break;
+
+      // relay off
+      case 'q':
+        digitalWrite(RELAY0, LOW);
+        break;
+      case 'Q':
+        digitalWrite(RELAY1, LOW);
         break;
     }
   }
