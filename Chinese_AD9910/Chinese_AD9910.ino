@@ -6,9 +6,9 @@ const int reg_len[] = {4,4,4,4,4,6,6,4,2,4,4,8,8,4,8,8,8,8,8,8,8,8,4};
 // SCK = Clock = pin 13
 // MOSI = Data Output = pin 11
 // MISO = Data Input = pin 12
-const int CS_pin = 16;
-const int IO_update_pin = 24;
-const int reset_pin = 2;
+const int CS_pin = 33;
+const int IO_update_pin = 34;
+const int reset_pin = 35;
 
 unsigned int result[8];
 
