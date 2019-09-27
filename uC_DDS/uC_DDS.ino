@@ -93,7 +93,7 @@ void setup()
   }
 
   pinMode(interruptPin, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(interruptPin), trigger_ramp, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(interruptPin), trigger_ramp, RISING);
 
   for (int i=0; i<3; i++)
     pinMode(profile_pins[i], OUTPUT);
@@ -188,6 +188,23 @@ void serialEvent()
                          Serial.parseInt(), Serial.parseInt(), Serial.parseInt(), Serial.parseInt(),
                          Serial.parseInt(), Serial.parseInt());
 
+      case 'R':
+      {
+        // e.g. R1, 50
+        bool enable_ramp = Serial.parseInt();
+        int ramp_mode = 2; // 2 = amplitude modulation
+        bool nodwell_high = 0;
+        bool nodwell_low = 1;
+        unsigned long upper_limit = 4294967295;
+        unsigned long lower_limit = 0;
+        const unsigned long DR_decr_step = pow(2, 32-14) - 1;
+        const unsigned long DR_incr_step = DR_decr_step;
+        const unsigned long DR_neg_slope = 1e9/4/(pow(2,14)-1)*Serial.parseInt()/1000;
+        const unsigned long DR_pos_slope = DR_neg_slope;
+        set_digital_ramp(enable_ramp, ramp_mode, nodwell_high, nodwell_low, upper_limit, lower_limit,
+                         DR_decr_step, DR_incr_step, DR_neg_slope, DR_pos_slope);
+      }
+
      case 'S':
        set_ramp_slope(Serial.parseInt());
 
@@ -197,6 +214,10 @@ void serialEvent()
 
       case 'd':
         ramp_delay_ms = Serial.parseInt();
+        break;
+
+      case 't':
+        digital_ramp_enable = true;
         break;
     }
   }
@@ -507,8 +528,6 @@ void set_digital_ramp(const bool ENABLE, const int dest, const bool no_dwell_hig
     DRS[i] = (DR_decr_step >> (3-i)*8) & 0xFF;
   for (int i=4; i<8; i++)
     DRS[i] = (DR_incr_step >> (3-(i-4))*8) & 0xFF;
-  for (int i=0; i<8; i++)
-    Serial.println(DRS[i], BIN);
   write_register(0x0C, DRS);
 
   // write Digital Ramp Rate (0x0D)
