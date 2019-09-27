@@ -24,12 +24,12 @@ const int PD = 18;
 const int TEN = 17;
 
 // digital ramp control pins
-const int RSO = 19;
-const int DRC = 33;
-const int DPH = 35;
-const int DRO = 34;
+const int DRCTL = 33;
+const int DRHOLD = 35;
+const int DROVER = 34;
 
 // other AD9910 pins
+const int RSO = 19; // RAM_SWP_OVR
 const int OSK = 37;
 const int PLL = 20;
 const int SYC = 39;
@@ -48,7 +48,7 @@ const int reg_len[] = {4,4,4,4,4,6,6,4,2,4,4,8,8,4,8,8,8,8,8,8,8,8,4};
 char result[8];
 
 // configuring the ramp
-volatile bool ramp_enable = false;
+volatile bool digital_ramp_enable = false;
 int ramp_time_step_us = 100;
 int ramp_delay_ms = 10;
 
@@ -80,6 +80,8 @@ void setup()
   pinMode(TEN, OUTPUT);
   digitalWrite(TEN, LOW);
 
+  pinMode(PLL, INPUT);
+
   for (int i=0; i<2; i++) {
     pinMode(F_pins[i], OUTPUT);
     digitalWrite(F_pins[i], LOW);
@@ -95,7 +97,12 @@ void setup()
 
   for (int i=0; i<3; i++)
     pinMode(profile_pins[i], OUTPUT);
-  
+
+  pinMode(DRCTL, OUTPUT);
+  pinMode(DRHOLD, OUTPUT);
+  pinMode(DROVER, INPUT);
+
+  set_PLL(true);
   set_profile(0, 85000000, 1000000000, 100);
 }
 
@@ -120,6 +127,9 @@ void serialEvent()
         digitalWrite(reset_pin, HIGH);
         delay(100);
         digitalWrite(reset_pin, LOW);
+
+        set_profile(0, 85000000, 1000000000, 100);
+        set_PLL(true);
         Serial.print("Device reset complete.\n");
         break;
 
@@ -163,10 +173,23 @@ void serialEvent()
         set_PLL(Serial.parseInt());
         break;
 
-      // PARALLEL RAMP CONTROL
-      case 't':
-        ramp_enable = true;
+      case 'n':
+        if (read_PLL())
+          Serial.println("PLL active.");
+        else
+          Serial.println("PLL not active.");
         break;
+
+      // RAMP CONTROL
+      
+      case 'D':
+        // e.g. D1, 2, 0, 1, 4294967295, 0, 262143, 262143, 763, 763
+        set_digital_ramp(Serial.parseInt(), Serial.parseInt(), Serial.parseInt(), Serial.parseInt(),
+                         Serial.parseInt(), Serial.parseInt(), Serial.parseInt(), Serial.parseInt(),
+                         Serial.parseInt(), Serial.parseInt());
+
+     case 'S':
+       set_ramp_slope(Serial.parseInt());
 
       case 's':
         ramp_time_step_us = Serial.parseInt();
@@ -185,7 +208,7 @@ void serialEvent()
 
 void trigger_ramp()
 {
-  ramp_enable = true;
+  digital_ramp_enable = true;
 }
 
 ///////////////////////////////////////////////
@@ -194,15 +217,12 @@ void trigger_ramp()
 
 void loop()
 {
-  // when ramp trigger received, execute the ramp
-  if (ramp_enable) {
+  if (digital_ramp_enable) {
     delay(ramp_delay_ms);
-    for (int i=255; i>0; i--) {
-      write_parallel(i, 8);
-      delayMicroseconds(ramp_time_step_us);
-    }
-    write_parallel(255, 8);
-    ramp_enable = false;
+    set_ramp_slope(1);
+    delay(10);
+    set_ramp_slope(0);
+    digital_ramp_enable = false;
   }
 }
 
@@ -259,7 +279,7 @@ void write_register(int reg, char data[])
 
   // flash the IO_RESET (as well as the CS) to clear potential unfinished transactions
   digitalWrite(CS_pin, HIGH);
-  delay(5);
+  delayMicroseconds(5);
   digitalWrite(CS_pin, LOW);
 
   // transfer data
@@ -270,7 +290,7 @@ void write_register(int reg, char data[])
     
     // transfer data from IO buffers to internal registers
     digitalWrite(IO_update_pin, HIGH);
-    delay(5);
+    delayMicroseconds(5);
     digitalWrite(IO_update_pin, LOW);
   }
 
@@ -294,6 +314,9 @@ void activate_profile(const int profile)
 
 void set_profile(const int profile, const int Fout, const int Fsysclk, const int ASF_percent)
 {
+  // turn off PLL
+  set_PLL(false);
+  
   // find the profile register
   const int profile_reg = profile + 14;
   
@@ -318,6 +341,9 @@ void set_profile(const int profile, const int Fout, const int Fsysclk, const int
   for (int i=4; i<8; i++)
     data[i] = FTW_bytes[i-4];
   write_register(profile_reg, data);
+
+  // turn PLL back on
+  set_PLL(true);
 }
 
 void enable_parallel_port(bool ENABLE)
@@ -402,7 +428,7 @@ void set_PLL(bool ENABLE)
   // read register 0x02
   char data[reg_len[0x02]];
   read_register(0x02);
-  for (int i=0; i<8; i++)
+  for (int i=0; i<reg_len[0x02]; i++)
     data[i] = result[i];
 
   if (ENABLE) {
@@ -419,10 +445,87 @@ void set_PLL(bool ENABLE)
   } else {
     data[2] &= B11111110; // clear the "PLL enable" bit
     data[0] |= B00000111; // set VCO SEL bits to "PLL bypass"
+    data[3] = 0;          // set N = 0
   }
 
   // write the new register values
   write_register(0x02, data);
+}
+
+bool read_PLL()
+{
+  if (digitalRead(PLL))
+    return true;
+  else
+    return false;
+}
+
+void set_digital_ramp(const bool ENABLE, const int dest, const bool no_dwell_high, const bool no_dwell_low,
+                      const unsigned long DR_upper_lim, const unsigned long DR_lower_lim,
+                      const unsigned long DR_decr_step, const unsigned long DR_incr_step,
+                      const unsigned long DR_neg_slope, const unsigned long DR_pos_slope)
+{
+  // turn off PLL
+  set_PLL(false);
+  
+  // read register 0x01
+  char data[reg_len[0x01]];
+  read_register(0x01);
+  for (int i=0; i<reg_len[0x01]; i++)
+    data[i] = result[i];
+
+  // calculate new CFR2 register contents
+  if (ENABLE) {
+    data[1] |= B00001000; // set the "Digital ramp enable" bit
+
+    // set Digital ramp destination
+    data[1] &= B11001111;
+    data[1] |= dest << 4;
+
+    // no dwell modes
+    data[1] &= B11111001; // clear the "Digital ramp no-dwell" bits
+    data[1] |= no_dwell_high << 2;
+    data[1] |= no_dwell_low << 1;
+  } else {
+    data[1] &= B11110111; // clear the "Digital ramp enable" bit
+  }
+
+  // write the new CFR2 register values
+  write_register(0x01, data);
+
+  // write Digital Ramp Limit (0x0B)
+  char DRL[8];
+  for (int i=0; i<4; i++)
+    DRL[i] = (DR_upper_lim >> (3-i)*8) & 0xFF;
+  for (int i=4; i<8; i++)
+    DRL[i] = (DR_lower_lim >> (3-(i-4))*8) & 0xFF;
+  write_register(0x0B, DRL);
+
+  // write Digital Ramp Step Size (0x0C)
+  char DRS[8];
+  for (int i=0; i<4; i++)
+    DRS[i] = (DR_decr_step >> (3-i)*8) & 0xFF;
+  for (int i=4; i<8; i++)
+    DRS[i] = (DR_incr_step >> (3-(i-4))*8) & 0xFF;
+  for (int i=0; i<8; i++)
+    Serial.println(DRS[i], BIN);
+  write_register(0x0C, DRS);
+
+  // write Digital Ramp Rate (0x0D)
+  char DRR[4];
+  for (int i=0; i<2; i++)
+    DRR[i] = (DR_neg_slope >> (1-i)*8) & 0xFF;
+  for (int i=2; i<4; i++)
+    DRR[i] = (DR_pos_slope >> (1-(i-2))*8) & 0xFF;
+  write_register(0x0D, DRR);
+
+  // turn PLL back on
+  set_PLL(true);
+}
+
+void set_ramp_slope(const bool positive_slope)
+{
+  digitalWrite(DRCTL, positive_slope);
 }
 
 ///////////////////////////////////////////////
