@@ -93,9 +93,10 @@ void setup()
   pinMode(interruptPin, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(interruptPin), trigger_ramp, CHANGE);
 
-  // defaults: output 85MHz from a 40MHz on-board crystal oscillator
-  set_PLL(true);
-  set_profile(21, 85000000, 1000000000, 100);
+  for (int i=0; i<3; i++)
+    pinMode(profile_pins[i], OUTPUT);
+  
+  set_profile(0, 85000000, 1000000000, 100);
 }
 
 ///////////////////////////////////////////////
@@ -133,6 +134,11 @@ void serialEvent()
         break;
 
       // HIGH-LEVEL AD9910 FUNCTIONS
+
+      case 'a':
+        activate_profile(Serial.parseInt());
+        break;
+      
       case 'p':
         set_profile(Serial.parseInt(), Serial.parseInt(), Serial.parseInt(), Serial.parseInt());
         break;
@@ -145,7 +151,7 @@ void serialEvent()
         parallel_mode(Serial.parseInt());
         break;
 
-      case 'a':
+      case 'A':
         enable_ASF(Serial.parseInt());
         break;
 
@@ -219,7 +225,7 @@ void read_register(int reg)
 
   // flash the IO_RESET (as well as the CS) to clear potential unfinished transactions
   digitalWrite(CS_pin, HIGH);
-  delayMicroseconds(5);
+  delay(5);
   digitalWrite(CS_pin, LOW);
   
   SPI.transfer(reg | B10000000);
@@ -253,7 +259,7 @@ void write_register(int reg, char data[])
 
   // flash the IO_RESET (as well as the CS) to clear potential unfinished transactions
   digitalWrite(CS_pin, HIGH);
-  delayMicroseconds(5);
+  delay(5);
   digitalWrite(CS_pin, LOW);
 
   // transfer data
@@ -264,7 +270,7 @@ void write_register(int reg, char data[])
     
     // transfer data from IO buffers to internal registers
     digitalWrite(IO_update_pin, HIGH);
-    delayMicroseconds(5);
+    delay(5);
     digitalWrite(IO_update_pin, LOW);
   }
 
@@ -276,8 +282,21 @@ void write_register(int reg, char data[])
 ////    AD9910 CONFIGURATION        ///////////
 ///////////////////////////////////////////////
 
-void set_profile(int profile_reg, int Fout, int Fsysclk, int ASF_percent)
+void activate_profile(const int profile)
 {
+  for (int i=0; i<3; i++) {
+    if ((profile>>i) & 1)
+      digitalWrite(profile_pins[i], HIGH);
+    else
+      digitalWrite(profile_pins[i], LOW);
+  }
+}
+
+void set_profile(const int profile, const int Fout, const int Fsysclk, const int ASF_percent)
+{
+  // find the profile register
+  const int profile_reg = profile + 14;
+  
   // calculate the frequency tuning word
   int FTW = (pow(2,32) * Fout) / Fsysclk;
   unsigned char FTW_bytes[4];
