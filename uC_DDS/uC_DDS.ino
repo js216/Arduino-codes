@@ -153,6 +153,11 @@ void serialEvent()
         set_profile(Serial.parseInt(), Serial.parseInt(), Serial.parseInt(), Serial.parseInt());
         break;
 
+      case 'o':
+        activate_profile(0);
+        set_profile(0, Serial.parseInt()*1000000, 1000000000, 100);
+        break;
+
       case 'P':
         enable_parallel_port(Serial.parseInt());
         break;
@@ -203,6 +208,7 @@ void serialEvent()
         const unsigned long DR_pos_slope = DR_neg_slope;
         set_digital_ramp(enable_ramp, ramp_mode, nodwell_high, nodwell_low, upper_limit, lower_limit,
                          DR_decr_step, DR_incr_step, DR_neg_slope, DR_pos_slope);
+        Serial.println("Ramp set.");
       }
 
      case 'S':
@@ -241,7 +247,7 @@ void loop()
   if (digital_ramp_enable) {
     delay(ramp_delay_ms);
     set_ramp_slope(1);
-    delay(10);
+    delayMicroseconds(5);
     set_ramp_slope(0);
     digital_ramp_enable = false;
   }
