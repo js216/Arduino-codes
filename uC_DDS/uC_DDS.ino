@@ -16,7 +16,7 @@ const int powerdown_pin = 21;
 
 // profiles pins
 const int profile_pins[] = {14, 15, 16};
-
+ 
 // parallel port pins
 const int D_pins[] = {30,29,28,27,26,25,24,10,9,8,7,6,5,4,3,2};
 const int F_pins[] = {32, 31};
