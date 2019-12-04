@@ -101,7 +101,7 @@ void read_temp(const int ch)
 
   // convert binary value to float
   long signed T = T0[3] + (T0[2]<<8) + (T0[1]<<16);
-  if (T0[1] && 0b10000000) // sign extend negative numbers
+  if (T0[1] & 0b10000000) // sign extend negative numbers
     T |= (long)0xff << 24;
   Serial.println((float)T/1024);
 }
