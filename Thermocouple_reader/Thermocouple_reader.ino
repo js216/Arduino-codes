@@ -23,6 +23,9 @@ void setup() {
 
   // configure channels
   sensor_config();
+
+  // set ideality factor
+  ideality_factor(1010);
 }
 
 void loop() {
@@ -39,8 +42,8 @@ void serialEvent()
         read_temp(Serial.parseInt());
         break;
 
-      case 's':
-        read_SPI(0x0f0, 1, true);
+      case 'i':
+        ideality_factor(Serial.parseFloat());
         break;
     }
   }
@@ -49,6 +52,21 @@ void serialEvent()
 /* ============================
  * THERMOMETER FUNCTIONS
    ============================ */
+
+void ideality_factor(float eta)
+{
+  // configure CH8 for diode, single-ended, 3 conversion cycles, average enabled, low excitation current
+  unsigned char CH8_config[4] = {0b11100111, 0b00000000, 0b000000000, 0b00000000};
+
+  // convert eta to binary (see LTC2983 datasheet, page 24)
+  long eta_long = (eta * 1048576) / 1000;
+  CH8_config[3] |= (char)eta_long;
+  CH8_config[2] |= (char)(eta_long >> 8);
+  CH8_config[1] |= (char)(eta_long >> 16);
+
+  // write the register
+  write_SPI(0x21c, 4, CH8_config);
+}
 
 void sensor_config()
 {
@@ -65,11 +83,6 @@ void sensor_config()
   for (int ch=0; ch<20; ch++)
     if (ch != 7)
       write_SPI(0x200+4*ch, 4, sensor_config);
-
-  // configure CH8 for diode, single-ended, 3 conversion cycles, average enabled,
-  // low excitation current, ideality factor = 1.003
-  const unsigned char CH8_config[] = {0b11100111, 0b00010000, 0b000110000, 0b10010011};
-  write_SPI(0x21c, 4, CH8_config);
 }
 
 void read_temp(const int ch)
