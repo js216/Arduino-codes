@@ -31,11 +31,23 @@ class TB6600
     }
     
     void set_dt(const int dt){
-     this->dt = dt;
+     this->dt_final = dt;
+    }
+
+    void set_smooth(const bool enable_smooth){
+     this->smooth = enable_smooth;
+    }
+
+    void get_X()
+    {
+      Serial.println(X);
     }
     
-    void move(const int NX){
-      int xt;
+    void move(const int NX)
+    {
+      long xt;
+
+      // determine motion direction
       if (NX>X) {
         xt = NX-X;
         digitalWrite (X_DIR_5v,LOW);
@@ -45,18 +57,43 @@ class TB6600
         digitalWrite (X_DIR_5v,HIGH);
         xt=-1;
       }
-    
+
+      // accelearation/deceleration profile
+      int dt_slow;
+      if (smooth)
+        dt_slow = 4*dt_final;
+      else
+        dt_slow = dt_final;
+      const int accel_len = (dt_slow - dt_final) / 2;
+      int dt = dt_slow;
+
+      
       for (; X !=NX; X=X+xt) {
+        // if decelerating
+        if (xt*X > NX-accel_len) {
+          if (dt < dt_slow)
+            dt += 1;
+
+        // if accelerating
+        } else {
+          if (dt > dt_final)
+            dt -= 1;
+        }
+        
+        // execute the motion
         digitalWrite (X_STP_5v, HIGH);
         delayMicroseconds (dt);
         digitalWrite (X_STP_5v, LOW);
         delayMicroseconds (dt);
       }
+
+      Serial.println(X);
     }
 
   private:
     long X = 0;    // present position
-    int dt = 400; // step duration
+    int dt_final = 250;  // step duration
+    bool smooth = false;
 
     const int X_ENgnd, X_EN_5v, X_DIRgnd, X_DIR_5v, X_STPgnd, X_STP_5v;
 };
@@ -69,7 +106,7 @@ TB6600 motor_y = TB6600(8,9,10,11,12,13);
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   motor_x.begin();
   motor_y.begin();
@@ -84,6 +121,10 @@ void serialEvent()
         motor_x.enable(Serial.parseInt());
         break;
 
+      case 'a':
+        motor_x.set_smooth(Serial.parseInt());
+        break;
+
       case 's':
         motor_x.set_dt(Serial.parseInt());
         break;
@@ -92,9 +133,18 @@ void serialEvent()
         motor_x.move(Serial.parseInt());
         break;
 
+      case 'x':
+        motor_x.get_X();
+        break;
+
       case 'E':
         motor_y.enable(Serial.parseInt());
         break;
+
+      case 'A':
+        motor_y.set_smooth(Serial.parseInt());
+        break;
+
 
       case 'S':
         motor_y.set_dt(Serial.parseInt());
@@ -103,6 +153,13 @@ void serialEvent()
       case 'M':
         motor_y.move(Serial.parseInt());
         break;
+
+      case 'X':
+        motor_y.get_X();
+        break;
+
+      case '?':
+        Serial.println("XY table ready.");
     }
   }
 }
