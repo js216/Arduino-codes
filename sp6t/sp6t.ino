@@ -2,16 +2,15 @@
 #define R1 _BV(PD2)
 #define R2 _BV(PD3)
 #define R3 _BV(PD4)
-#define R4 _BV(PD5)
-#define R5 _BV(PD6)
-#define R6 _BV(PD7)
+#define R4 _BV(PD6)
 
 const int relay_delay = 100;
+int switch_state = 0;
 
 void setup() {
   Serial.begin(9600);
 
-  DDRB = R1 | R2 | R3 | R4 | R5 | R6;
+  DDRB = R1 | R2 | R3 | R4;
   PORTD = 0;
 }
 
@@ -24,7 +23,6 @@ void serialEvent() {
     switch (c) {
       case '0':
         PORTD = 0;
-        delay(relay_delay);
         break;
       case '1':
         PORTD = 0;
@@ -45,16 +43,6 @@ void serialEvent() {
         PORTD = 0;
         delay(relay_delay);
         PORTD = R4;
-        break;
-      case '5':
-        PORTD = 0;
-        delay(relay_delay);
-        PORTD = R5;
-        break;
-      case '6':
-        PORTD = 0;
-        delay(relay_delay);
-        PORTD = R6;
         break;
     }
   }
