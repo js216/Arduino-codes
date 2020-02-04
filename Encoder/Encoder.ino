@@ -1,15 +1,8 @@
-// pin definitions
-int PinA = 3;
-int PinB = 4;
+#include <Encoder.h> // include the encoder library
 
-// state variables
-int pos = 0;
-int PinALast = LOW;
-int n = LOW;
+Encoder enc(3, 4); // create an encoder object
 
 void setup() {
-  pinMode (PinA, INPUT_PULLUP);
-  pinMode (PinB, INPUT_PULLUP);
   Serial.begin (9600);
 }
 
@@ -19,22 +12,14 @@ void serialEvent()
     char cmd = Serial.read();
     switch (cmd) {
       case '?':
-        Serial.println(pos, DEC);
+        Serial.println(enc.read(), DEC);
         break;
       case '0':
-        pos = 0;
+        enc.write(0);
         break;
     }
   }
 }
 
 void loop() {
-  n = digitalRead(PinA);
-  if ((PinALast == LOW) && (n == HIGH)) {
-    if (digitalRead(PinB) == LOW)
-      pos--;
-    else
-      pos++;
-  }
-  PinALast = n;
 }
