@@ -1,10 +1,10 @@
 #include <SPI.h>
 
 // pin configuration
-const int OR[] = {A0, 5, 7}; // x, y, z
-const int ERR[] = {A1, 6, 8}; // x, y, z
-const int SEL[] = {A2, 10, 9}; // bsel, rsel0, rsel1
-const int CSB=A3, SYNC=A4;
+const int SEL[] = {A1, 4, 5}; // bsel, rsel0, rsel1
+const int ERR[] = {6, 7, 10}; // x, y, z
+const int OR[] = {A0, 8, 9}; // x, y, z
+const int CSB=3, SYNC=2;
 
 // for data transfer
 byte byte0=0x00, byte1=0x00;
@@ -22,6 +22,13 @@ void setup() {
     pinMode(ERR[i], INPUT);
     pinMode(SEL[i], OUTPUT);
   }
+
+  // DRV425 low bandwidth
+  digitalWrite(SEL[0], LOW);
+
+  // DRV425 select V_ref = 1.65 V
+  digitalWrite(SEL[1], HIGH);
+  digitalWrite(SEL[2], LOW);
 }
 
 void serialEvent() {
@@ -31,11 +38,44 @@ void serialEvent() {
 
     // decide what to do with it
     switch (c) {
+      case 'r':
+        printout_magnetometer();
+        break;
+        
       case '?':
         Serial.write("Magnetometer v2.1 board ready.\n");
         break;
     }
   }
+}
+
+void printout_magnetometer()
+{
+  // for x, y, z
+  for (int i=0; i<3; i++) {
+    // check for error
+    if (digitalRead(ERR[i]) == HIGH)
+      Serial.write("ERR");
+
+    // check for overrange
+    else if (digitalRead(OR[i]) == HIGH)
+      Serial.write("OR");
+
+    // read magnetic field
+    else
+      Serial.write(get_B(i));
+
+    // separator
+    if (i < 2)
+      Serial.write(", ");
+    else
+      Serial.write('\n');
+  }
+}
+
+int get_B(int axis)
+{
+  
 }
 
 void loop() {
@@ -58,7 +98,7 @@ void printBits(byte myByte){
 void read_SPI(const unsigned int address, const int num_reg, const bool printing)
 {
   // begin transaction
-  SPI.beginTransaction(SPISettings(SPI_speed, MSBFIRST, SPI_MODE));
+  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE3));
   digitalWrite(CS_pin, LOW);
 
   // command to read configuration registers
