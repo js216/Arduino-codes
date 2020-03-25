@@ -7,7 +7,7 @@ const int OR[] = {A0, 8, 9}; // x, y, z
 const int CSB=3, SYNC=2;
 
 // for data transfer
-byte byte0=0x00, byte1=0x00;
+byte data[3];
 
 void setup() {
   Serial.begin(9600);
@@ -43,7 +43,8 @@ void serialEvent() {
         break;
         
       case '?':
-        Serial.write("Magnetometer v2.1 board ready.\n");
+        Serial.write("Magnetometer v2.2 board ready.\n");
+        print_ID();
         break;
     }
   }
@@ -78,6 +79,12 @@ int get_B(int axis)
   
 }
 
+void print_ID()
+{
+  read_SPI(0x05, 1, 1);
+  Serial.println(data[0], HEX);
+}
+
 void loop() {
 }
 
@@ -95,53 +102,18 @@ void printBits(byte myByte){
  }
 }
 
-void read_SPI(const unsigned int address, const int num_reg, const bool printing)
+void transfer_SPI(const unsigned int address, const int num_reg, const int read_bit)
 {
   // begin transaction
   SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE3));
   digitalWrite(CS_pin, LOW);
 
-  // command to read configuration registers
-  SPI.transfer(0x03);
-
-  // 16-bit register address
-  SPI.transfer16(address);
+  // command to access (either read or write) a given register
+  SPI.transfer((read_bit << 6) | address);
 
   // read the returned data
   for (int i=0; i<num_reg; i++)
-    T0[i] = SPI.transfer(0x00);
-
-  // print out the returned value to serial
-  if (printing) {
-    for (int i=0; i<num_reg; i++) {
-      printBits(T0[i]);
-      Serial.print(" ");
-    }
-    Serial.print("\n");
-  }
-
-  // end transaction
-  digitalWrite(CS_pin, HIGH);
-  SPI.endTransaction();
-}
-
-void write_SPI(const unsigned int address, const int num_reg, const unsigned char data[])
-{
-  // begin transaction
-  SPI.beginTransaction(SPISettings(SPI_speed, MSBFIRST, SPI_MODE));
-  digitalWrite(CS_pin, LOW);
-
-  // command to write to configuration registers
-  SPI.transfer(0x02);
-
-  // 16-bit register address
-  SPI.transfer16(address);
-
-  // write serial data to SPI
-  for (int i=0; i<num_reg; i++) {
-    SPI.transfer(data[i]);
-    delay(1);
-  }
+    data[i] = SPI.transfer(data[i]);
 
   // end transaction
   digitalWrite(CS_pin, HIGH);
