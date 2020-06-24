@@ -32,7 +32,7 @@ void serialEvent() {
       return;
     }
     else {
-      Serial.println("Unknown command.");
+//      Serial.println("Unknown command.");
       return;
     }
 

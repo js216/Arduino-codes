@@ -1,7 +1,7 @@
 #include <SPI.h>
 
 // pin configuration
-const int CSB = 2;
+const int CSB = 15;
 
 void write_SPI(const unsigned int val)
 {
@@ -76,7 +76,7 @@ void serialEvent() {
 }
 
 void loop() {
-  for (int i=0; i<0xff; i++)
-    for (int j=0; j<0xff; i++)
-      write_SPI((i<<2) + j);
+//  for (int i=0; i<0xff; i++)
+//    for (int j=0; j<0xff; i++)
+//      write_SPI((i<<2) + j);
 }

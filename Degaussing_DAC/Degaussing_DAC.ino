@@ -65,18 +65,13 @@ void serialEvent() {
     // decide what to do with it
     switch (c) {
       case '?':
-        Serial.write("Seed out v1.0 board ready.\n");
-        break;
-
-      case 'w':
-        write_SPI(Serial.parseInt());
+        Serial.write("Degaussing DAC board ready.\n");
         break;
     }
   }
 }
 
 void loop() {
-  for (int i=0; i<0xff; i++)
-    for (int j=0; j<0xff; i++)
-      write_SPI((i<<2) + j);
+  for (int i=0; i<0xffff; i++)
+    write_SPI(0xffff*sin(i));
 }

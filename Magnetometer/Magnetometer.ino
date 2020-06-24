@@ -4,7 +4,7 @@
 const int SEL[] = {A1, 4, 5}; // bsel, rsel0, rsel1
 const int ERR[] = {6, 7, 10}; // x, y, z
 const int OR[] = {A0, 8, 9}; // x, y, z
-const int CSB=3, SYNC=2;
+const int CS_pin=3, SYNC=2;
 
 // for data transfer
 byte data[3];
@@ -14,8 +14,8 @@ void setup() {
   SPI.begin();
 
   // pin configuration
-  pinMode(CSB, OUTPUT);
-  digitalWrite(CSB, HIGH);
+  pinMode(CS_pin, OUTPUT);
+  digitalWrite(CS_pin, HIGH);
   pinMode(SYNC, INPUT);
   for (int i=0; i<3; i++) {
     pinMode(OR[i], INPUT);
@@ -81,7 +81,7 @@ int get_B(int axis)
 
 void print_ID()
 {
-  read_SPI(0x05, 1, 1);
+  transfer_SPI(0x05, 1, 1);
   Serial.println(data[0], HEX);
 }
 

@@ -1,7 +1,7 @@
 #include <SPI.h>
 
 // pin configuration
-const int CSB = 2;
+const int CSB = 14;
 
 void setup() {
   Serial.begin(9600);
