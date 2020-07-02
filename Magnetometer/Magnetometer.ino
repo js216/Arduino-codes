@@ -1,7 +1,7 @@
 #include <SPI.h>
 
 // pin configuration
-const int SEL[] = {A1, 4, 5}; // bsel, rsel0, rsel1
+const int SEL[] = {A1, 4, 5}; // bsel, rse0, rsel
 const int ERR[] = {6, 7, 10}; // x, y, z
 const int OR[] = {A0, 8, 9}; // x, y, z
 const int CS_pin=3, SYNC=2;
@@ -16,7 +16,8 @@ void setup() {
   // pin configuration
   pinMode(CS_pin, OUTPUT);
   digitalWrite(CS_pin, HIGH);
-  pinMode(SYNC, INPUT);
+  pinMode(SYNC, OUTPUT);
+  digitalWrite(SYNC, HIGH);
   for (int i=0; i<3; i++) {
     pinMode(OR[i], INPUT);
     pinMode(ERR[i], INPUT);
@@ -43,7 +44,7 @@ void serialEvent() {
         break;
         
       case '?':
-        Serial.write("Magnetometer v2.2 board ready.\n");
+        Serial.write("Magnetometer v2.3 board ready.\n");
         print_ID();
         break;
     }
@@ -112,8 +113,7 @@ void transfer_SPI(const unsigned int address, const int num_reg, const int read_
   SPI.transfer((read_bit << 6) | address);
 
   // read the returned data
-  for (int i=0; i<num_reg; i++)
-    data[i] = SPI.transfer(data[i]);
+  SPI.transfer(data, num_reg);
 
   // end transaction
   digitalWrite(CS_pin, HIGH);

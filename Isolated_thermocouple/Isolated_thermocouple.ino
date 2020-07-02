@@ -22,51 +22,39 @@ void serialEvent() {
     int c = (char)Serial.read();
 
     // parse input
-    int n;
-    if (c == '1') n = 1;
-    else if (c == '2') n = 2;
-    else if (c == '3') n = 3;
-    else if (c == '4') n = 4;
-    else if (c == '?') {
-      Serial.println("Board ready.");
-      return;
-    }
-    else {
-//      Serial.println("Unknown command.");
-      return;
-    }
-
-    // measure temperature
-    read_SPI(CS_arr[n-1]);
-
-//    // print out bits for debugging
-//    for (int i=0; i<4; i++)
-//      Serial.println(data[i], BIN);
-
-    // return reading
-    Serial.print(n, DEC);
-    Serial.print(", ");
-    decode_data();
+    if      (c == '1') print_one(1);
+    else if (c == '2') print_one(2);
+    else if (c == '3') print_one(3);
+    else if (c == '4') print_one(4);
+    else if (c == 'a') print_all();
+    else if (c == '?') Serial.println("Board No. 2 is now ready.");
   }
 }
 
 void loop() {
 }
 
-
-void read_SPI(const int CS_pin)
+void print_one(int n)
 {
-  // begin transaction
-  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
-  digitalWrite(CS_pin, LOW);
+    // measure temperature
+    read_SPI(CS_arr[n-1]);
 
-  // read the data
-  for (int i=0; i<4; i++)
-    data[i] = SPI.transfer(0x00);
+    // return reading
+    Serial.print(n, DEC);
+    Serial.print(", ");
+    decode_data();
+    Serial.print('\n');
+}
 
-  // end transaction
-  digitalWrite(CS_pin, HIGH);
-  SPI.endTransaction();
+void print_all()
+{
+  for (int n=0; n<4; n++) {
+    read_SPI(CS_arr[n]);
+    decode_data();
+    if (n<3)
+      Serial.print(", ");
+  }
+  Serial.print('\n');
 }
 
 void decode_data()
@@ -84,13 +72,13 @@ void decode_data()
 
   // check for error conditions
   if (data[3] & 0x01) {
-    Serial.println("open circuit");
+    Serial.print("open circuit");
     return;
   } else if (data[3] & 0x02) {
-    Serial.println("short to GND");
+    Serial.print("short to GND");
     return;
   } else if (data[3] & 0x04) {
-    Serial.println("short to VCC");
+    Serial.print("short to VCC");
     return;
   } else {
     // 14-bit thermocouple data
@@ -99,6 +87,21 @@ void decode_data()
       sign = -1;
       data[0] &= 0b01111111;
     }
-    Serial.println(sign*((data[0]<<6) + (data[1]>>2))/4.0, 2);
+    Serial.print(sign*((data[0]<<6) + (data[1]>>2))/4.0, 2);
   }
+}
+
+void read_SPI(const int CS_pin)
+{
+  // begin transaction
+  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
+  digitalWrite(CS_pin, LOW);
+
+  // read the data
+  for (int i=0; i<4; i++)
+    data[i] = SPI.transfer(0x00);
+
+  // end transaction
+  digitalWrite(CS_pin, HIGH);
+  SPI.endTransaction();
 }
