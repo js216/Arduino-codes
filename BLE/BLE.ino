@@ -5,9 +5,9 @@
 
 // for sensor data
 int temperature;
-int humidity;
-int pressure;
-//float Ax,Ay,Az, Gx,Gy,Gz, Mx,My,Mz;
+unsigned int humidity;
+unsigned int pressure;
+//float B[3];
 
 // for loop delay
 unsigned long previousMillis = 0;
@@ -18,8 +18,8 @@ BLEDevice conn;
 BLEService envServ("181A");
 BLEIntCharacteristic tempCh("2A6E", BLERead | BLENotify);
 BLEUnsignedIntCharacteristic humCh("2A6F", BLERead | BLENotify);
-BLEUnsignedIntCharacteristic presCh("2AA3", BLERead | BLENotify);
-//BLEUnsignedIntCharacteristic magnCh("2AA1", BLERead | BLENotify);
+BLEUnsignedIntCharacteristic presCh("2A6D", BLERead | BLENotify);
+//BLECharacteristic magnCh("2AA1", BLERead | BLENotify, 12);
 
 void setup()
 {
@@ -39,6 +39,7 @@ void setup()
   BLE.addService(envServ);
   tempCh.setValue(0);
   humCh.setValue(0);
+  presCh.setValue(0);
   BLE.advertise();
 }
 
@@ -66,25 +67,13 @@ void updateReadings()
         // get data from sensors
         temperature = 100 * HTS.readTemperature();
         humidity = 100 * HTS.readHumidity();
-//        pressure = 100 * BARO.readPressure();
-//        if (IMU.accelerationAvailable())
-//          IMU.readAcceleration(Ax, Ay, Az);
-//        if (IMU.gyroscopeAvailable())
-//          IMU.readGyroscope(Gx, Gy, Gz);
+        pressure = 10000 * BARO.readPressure();
 //        if (IMU.magneticFieldAvailable())
-//          IMU.readMagneticField(Mx, My, Mz);
-
-        // write to serial
-        Serial.print(temperature/100.);
-        Serial.print(" degC, ");
-        Serial.print(humidity/100.);
-        Serial.print(" %, ");
-        Serial.print(pressure/100.);
-        Serial.println(" kPa");
+//          IMU.readMagneticField(B[0], B[1], B[2]);
 
         // update BLE characteristics
         tempCh.setValue(temperature);
         humCh.setValue(humidity);
-//        presCh.setValue(pressure);
-//        magnCh.setValue((int)100*Mx);
+        presCh.setValue(pressure);
+//        magnCh.setValue((byte *) &B, 12);
 }
