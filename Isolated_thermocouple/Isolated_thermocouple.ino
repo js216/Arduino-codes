@@ -27,7 +27,7 @@ void serialEvent() {
     else if (c == '3') print_one(3);
     else if (c == '4') print_one(4);
     else if (c == 'a') print_all();
-    else if (c == '?') Serial.println("Board No. 2 is now ready.");
+    else if (c == '?') Serial.println("Board No. 4 is now ready.");
   }
 }
 
