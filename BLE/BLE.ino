@@ -37,9 +37,9 @@ void setup()
   envServ.addCharacteristic(presCh);
 //  envServ.addCharacteristic(magnCh);
   BLE.addService(envServ);
-  tempCh.setValue(0);
-  humCh.setValue(0);
-  presCh.setValue(0);
+//  tempCh.setValue(0);
+//  humCh.setValue(0);
+//  presCh.setValue(0);
   BLE.advertise();
 }
 
