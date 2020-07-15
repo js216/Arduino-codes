@@ -4,8 +4,9 @@
 const int CSB = 2;
 
 // signal generation parameters
-int T = 650;
-int amp = 5;
+const unsigned long int amp_init = 65535;
+unsigned long int amp = 0;
+float div_f = 1.00;
 
 void setup() {
   Serial.begin(9600);
@@ -15,8 +16,8 @@ void setup() {
   pinMode(CSB, OUTPUT);
   digitalWrite(CSB, HIGH);
 
-  // set DAC for high gain
-  set_gain(HIGH);
+  // configure the DAC
+  set_gain(LOW);
 }
 
 void serialEvent() {
@@ -27,33 +28,34 @@ void serialEvent() {
     // decide what to do with it
     switch (c) {
       case '?':
-        Serial.write("Degaussing DAC board ready.\n");
+        Serial.print("Degaussing DAC board ready; amp = ");
+        Serial.print(amp);
+        Serial.print(", div_f = ");
+        Serial.print(div_f, 4);
+        Serial.println(".");
         break;
 
-      case 'a':
-        amp = Serial.parseInt();
+      case 'r':
+        amp = amp_init;
         break;
 
-      case 't':
-        T = Serial.parseInt();
-        break;
-
-      case 'g':
-        set_gain(Serial.parseInt());
+      case 'd':
+        div_f = Serial.parseFloat();
         break;
 
       case 'w':
-        write_SPI(Serial.parseInt());
+        amp = Serial.parseInt();
         break;
     }
   }
 }
 
 void loop() {
-//  for (int i=0; i<T; i++) {
-//    long n = 0x8000 * (sin(2*3.14159*i/T)+1) / amp;
-//    write_SPI(n);
-//  }
+  write_SPI(amp);
+  delay(50);
+  write_SPI(0);
+  amp /= div_f;
+  delay(50);
 }
 
 void set_gain(const bool gain)
@@ -86,12 +88,11 @@ void write_SPI(const unsigned int val)
   data[2] = (val << 4) & 0xff;
 
   // begin transaction
-  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE1));
+  SPI.beginTransaction(SPISettings(10000000, MSBFIRST, SPI_MODE1));
   digitalWrite(CSB, LOW);
 
   // transfer data
-  for (int i=0; i<3; i++)
-    SPI.transfer(data[i]);
+  SPI.transfer(data, 3);
 
   // end transaction
   digitalWrite(CSB, HIGH);

@@ -37,9 +37,9 @@ void setup() {
 
 void loop() {
   if (digitalRead(peak1) == HIGH)
-    set_seed(CSB_seed1, 100000);
+    set_seed(CSB_seed1, 65535);
   else
-    set_seed(CSB_seed1, 10000);
+    set_seed(CSB_seed1, 0);
 }
 
 

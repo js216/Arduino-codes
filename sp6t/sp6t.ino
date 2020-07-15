@@ -2,7 +2,9 @@
 #define R1 _BV(PD2)
 #define R2 _BV(PD3)
 #define R3 _BV(PD4)
-#define R4 _BV(PD6)
+#define R4 _BV(PD5)
+#define R5 _BV(PD6)
+#define R6 _BV(PD7)
 
 const int relay_delay = 100;
 int switch_state = 0;
@@ -43,6 +45,19 @@ void serialEvent() {
         PORTD = 0;
         delay(relay_delay);
         PORTD = R4;
+        break;
+      case '5':
+        PORTD = 0;
+        delay(relay_delay);
+        PORTD = R5;
+        break;
+      case '6':
+        PORTD = 0;
+        delay(relay_delay);
+        PORTD = R6;
+        break;
+      case '?':
+        Serial.write("SP6T board ready.\n");
         break;
     }
   }
