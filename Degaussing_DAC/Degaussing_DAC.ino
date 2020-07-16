@@ -4,9 +4,11 @@
 const int CSB = 2;
 
 // signal generation parameters
-const unsigned long int amp_init = 65535;
-unsigned long int amp = 0;
-float div_f = 1.00;
+bool trig = false;
+float freq = 10;
+float t_rise = 1;
+float t_decay = 5;
+const unsigned int amp_max = 65535;
 
 void setup() {
   Serial.begin(9600);
@@ -28,34 +30,53 @@ void serialEvent() {
     // decide what to do with it
     switch (c) {
       case '?':
-        Serial.print("Degaussing DAC board ready; amp = ");
-        Serial.print(amp);
-        Serial.print(", div_f = ");
-        Serial.print(div_f, 4);
-        Serial.println(".");
+        Serial.println("Degaussing DAC board ready.");
+        break;
+
+      case 't':
+        trig = true;
+        break;
+
+      case 'f':
+        freq = Serial.parseInt();
         break;
 
       case 'r':
-        amp = amp_init;
+        t_rise = Serial.parseInt();
         break;
 
       case 'd':
-        div_f = Serial.parseFloat();
-        break;
-
-      case 'w':
-        amp = Serial.parseInt();
+        t_decay = Serial.parseInt();
         break;
     }
   }
 }
 
 void loop() {
-  write_SPI(amp);
-  delay(50);
-  write_SPI(0);
-  amp /= div_f;
-  delay(50);
+  if (trig) {
+    // initialize
+    unsigned int amp = 1;
+    const int dt = 1000 / 2 / freq;
+    const int inc = amp_max / freq / t_rise;
+    const float div_f = exp(1./(freq * t_decay));
+    
+    while (amp > 0) {
+      // calculate amplitude
+      if (trig && (amp < amp_max-inc))
+        amp += inc;
+      else {
+        trig = false;
+        amp /= div_f;
+      }
+      Serial.println(amp);
+
+      // write one cycle
+      delay(dt);
+      write_SPI(amp);
+      delay(dt);
+      write_SPI(0);
+    }
+  }
 }
 
 void set_gain(const bool gain)
