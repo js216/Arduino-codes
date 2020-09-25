@@ -1,6 +1,5 @@
 #include <SPI.h>
 #include <avr/io.h>
-#include <avr/interrupt.h>
 
 ///////////////////////////////////////////////
 ////    PIN ASSIGNMENT FOR AD9910   ///////////
@@ -35,7 +34,11 @@ const int PLL = 20;
 const int SYC = 39;
 
 // external input pin
-const int interruptPin = 23;
+const int inputPin = A9;
+
+// PID parameters
+float Kp=0, Ki=1, setpoint=500;
+long int accumulator=0;
 
 ///////////////////////////////////////////////
 ////    OTHER VARIABLES             ///////////
@@ -82,6 +85,8 @@ void setup()
 
   pinMode(PLL, INPUT);
 
+  pinMode(inputPin, INPUT);
+
   for (int i=0; i<2; i++) {
     pinMode(F_pins[i], OUTPUT);
     digitalWrite(F_pins[i], LOW);
@@ -99,8 +104,11 @@ void setup()
   pinMode(DRHOLD, OUTPUT);
   pinMode(DROVER, INPUT);
 
+  // AD9910 defaults
   set_PLL(true);
   set_profile(0, 85000000, 1000000000, 100);
+  enable_parallel_port(1);
+  write_parallel(0, 16);
 }
 
 ///////////////////////////////////////////////
@@ -187,16 +195,53 @@ void serialEvent()
       case 'd':
         write_parallel(Serial.parseInt(), 16);
         break;
+
+      case 'k':
+        accumulator = 0;
+        Kp = Serial.parseFloat();
+        break;
+
+      case 'K':
+        accumulator = 0;
+        Ki = Serial.parseFloat();
+        break;
+
+      case 's':
+        accumulator = 0;
+        setpoint = Serial.parseFloat();
+        break;
     }
   }
 }
 
 ///////////////////////////////////////////////
-////    MAIN DEVICE LOOP            ///////////
+////    MAIN DEVICE & PID LOOP      ///////////
 ///////////////////////////////////////////////
 
 void loop()
 {
+  // calculate error
+  const int DAC_val = analogRead(inputPin);
+  const int error = DAC_val - setpoint;
+  accumulator += error;
+
+  // calculate output
+  int dds_out = Kp * error + Ki * accumulator;
+
+  // check output is positive; else make it zero
+  if (dds_out < 0)
+    dds_out = 0;
+
+  // write to parallel port
+  write_parallel(dds_out, 16);
+
+  // for debugging
+//  Serial.print(DAC_val);
+//  Serial.print(",");
+//  Serial.print(error);
+//  Serial.print(",");
+//  Serial.println(dds_out);
+//  delay(10);
 }
 
 ///////////////////////////////////////////////
