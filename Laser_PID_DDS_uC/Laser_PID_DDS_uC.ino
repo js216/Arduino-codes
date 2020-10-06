@@ -37,7 +37,7 @@ const int SYC = 39;
 const int inputPin = A9;
 
 // PID parameters
-float Kp=0, Ki=1, setpoint=500;
+float Kp=0, Ki=0, setpoint=500;
 long int accumulator=0;
 
 ///////////////////////////////////////////////
@@ -210,6 +210,10 @@ void serialEvent()
         accumulator = 0;
         setpoint = Serial.parseFloat();
         break;
+
+      case '?':
+        Serial.println(analogRead(inputPin));
+        break;
     }
   }
 }
@@ -221,12 +225,11 @@ void serialEvent()
 void loop()
 {
   // calculate error
-  const int DAC_val = analogRead(inputPin);
-  const int error = DAC_val - setpoint;
+  const int error = analogRead(inputPin) - setpoint;
   accumulator += error;
 
   // calculate output
-  int dds_out = Kp * error + Ki * accumulator;
+  int dds_out = Kp*error + Ki*accumulator;
 
   // check output is positive; else make it zero
   if (dds_out < 0)
@@ -234,14 +237,6 @@ void loop()
 
   // write to parallel port
   write_parallel(dds_out, 16);
-
-  // for debugging
-//  Serial.print(DAC_val);
-//  Serial.print(",");
-//  Serial.print(error);
-//  Serial.print(",");
-//  Serial.println(dds_out);
-//  delay(10);
 }
 
 ///////////////////////////////////////////////
@@ -501,14 +496,4 @@ char demandSerialByte(const int N = 1000)
   }
 
   return 0;
-}
-
-void write_parallel(const int n, const int nbits)
-{
-  for (int i=0; i<nbits; i++) {
-    if ((n>>i)&1)
-      digitalWrite(D_pins[i+16-nbits], HIGH);
-    else
-      digitalWrite(D_pins[i+16-nbits], LOW);
-  }
 }
