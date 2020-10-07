@@ -1,14 +1,14 @@
 #include <SPI.h>
 
 // pin configuration
-const int CS_arr[] = {2, 3, 4, 10};
+const int CS_arr[] = {2,3,4,5,6,7,8,9};
 
 void setup() {
   Serial.begin(9600);
   SPI.begin();
 
   // pin configuration for SPI
-  for (int i=0; i<4; i++) {
+  for (int i=0; i<8; i++) {
     pinMode(CS_arr[i], OUTPUT);
     digitalWrite(CS_arr[i], HIGH);    
   }
@@ -26,8 +26,12 @@ void serialEvent() {
     else if (c == '2') print_one(2);
     else if (c == '3') print_one(3);
     else if (c == '4') print_one(4);
+    else if (c == '5') print_one(5);
+    else if (c == '6') print_one(6);
+    else if (c == '7') print_one(7);
+    else if (c == '8') print_one(8);
     else if (c == 'a') print_all();
-    else if (c == '?') Serial.println("Board No. 4 is now ready.");
+    else if (c == '?') Serial.println("Isolated thermocouple v2.0. Board No. 1.");
   }
 }
 
@@ -48,7 +52,7 @@ void print_one(int n)
 
 void print_all()
 {
-  for (int n=0; n<4; n++) {
+  for (int n=0; n<8; n++) {
     read_SPI(CS_arr[n]);
     decode_data();
     if (n<3)
@@ -94,7 +98,7 @@ void decode_data()
 void read_SPI(const int CS_pin)
 {
   // begin transaction
-  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
+  SPI.beginTransaction(SPISettings(100000, MSBFIRST, SPI_MODE0));
   digitalWrite(CS_pin, LOW);
 
   // read the data

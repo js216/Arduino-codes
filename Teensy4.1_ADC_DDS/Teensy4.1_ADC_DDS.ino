@@ -22,8 +22,8 @@ const int reg_len[] = {4,4,4,4,4,6,6,4,2,4,4,8,8,4,8,8,8,8,8,8,8,8,4};
 char result[8];
 
 // PID parameters
-int setpoint=40000;
-float Kp=0, Ki=0, loop_delay=0;
+int setpoint=40000, loop_delay=0;
+float Kp=0, Ki=0;
 int error, dds_out, accumulator;
 
 void setup() {
@@ -76,22 +76,23 @@ void setup() {
 }
 
 void loop() {
-  // calculate error
-  error = read_ADC() - setpoint;
-  accumulator += error;
-
-  // calculate output
-  dds_out = Kp*error + Ki*accumulator;
-
-  // check output is positive; else make it zero
-  if (dds_out < 0)
-    dds_out = 0;
-
-  // write to parallel port
-  write_parallel(dds_out);
+//  // calculate error
+//  error = read_ADC() - setpoint;
+//  accumulator += error;
+//
+//  // calculate output
+//  dds_out = Kp*error + Ki*accumulator;
+//
+//  // check output is positive; else make it zero
+//  if (dds_out < 0)
+//    dds_out = 0;
+//
+//  // write to parallel port
+//  write_parallel(dds_out);
 
   // loop delay
   delayMicroseconds(loop_delay);
+  write_parallel(Kp*read_ADC());
 }
 
 void serialEvent()
@@ -101,7 +102,14 @@ void serialEvent()
 
     switch (cmd) {
       case '?':
-        Serial.println("Teensy4.1_ADC_DDS board ready.");
+        Serial.print("Kp=");
+        Serial.print(Kp);
+        Serial.print(", Ki=");
+        Serial.print(Ki);
+        Serial.print(", SP=");
+        Serial.print(setpoint);
+        Serial.print(", loop_delay=");
+        Serial.println(loop_delay);
         break;
 
       // ADC commands
@@ -123,6 +131,7 @@ void serialEvent()
 
         set_profile(0, 85000000, 1000000000, 100);
         set_PLL(true);
+        enable_parallel_port(1);
         Serial.print("Device reset complete.\n");
         break;
 
