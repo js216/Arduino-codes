@@ -4,7 +4,7 @@
 const int CS_arr[] = {2,3,4,5,6,7,8,9};
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   SPI.begin();
 
   // pin configuration for SPI
@@ -55,7 +55,7 @@ void print_all()
   for (int n=0; n<8; n++) {
     read_SPI(CS_arr[n]);
     decode_data();
-    if (n<3)
+    if (n<7)
       Serial.print(", ");
   }
   Serial.print('\n');

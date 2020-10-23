@@ -11,7 +11,6 @@ const int powerdown_pin = 21;
 const int profile_pins[] = {40, 41};
 const int D_pins[] = {30, 29, 28, 25, 24, 9, 8, 7, 6, 5, 4, 15, 16, 17, 3, 2};
 const int F_pins[] = {32, 31};
-const int PD = 18;
 const int TEN = 36;
 const int PLL = 20;
 
@@ -27,7 +26,7 @@ float Kp=0, Ki=0;
 int error, dds_out, accumulator;
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   // SPI for talking to the ADC
   pinMode(CS_ADC, OUTPUT);
@@ -69,10 +68,7 @@ void setup() {
     pinMode(profile_pins[i], OUTPUT);
 
   // AD9910 defaults
-  set_PLL(true);
-  set_profile(0, 85000000, 1000000000, 100);
-  enable_parallel_port(1);
-  write_parallel(0);
+  reset_DDS();
 }
 
 void loop() {
@@ -125,14 +121,7 @@ void serialEvent()
       // DDS commands
       
       case '0':
-        digitalWrite(reset_pin, HIGH);
-        delay(100);
-        digitalWrite(reset_pin, LOW);
-
-        set_profile(0, 85000000, 1000000000, 100);
-        set_PLL(true);
-        enable_parallel_port(1);
-        Serial.print("Device reset complete.\n");
+        reset_DDS();
         break;
 
       case 'n':
@@ -182,14 +171,32 @@ void serialEvent()
  * DDS FUNCTIONS
    ============================ */
 
-void write_parallel(short n)
+void reset_DDS()
 {
+  digitalWrite(reset_pin, HIGH);
+  delay(100);
+  digitalWrite(reset_pin, LOW);
+
+  set_profile(0, 85000000, 1000000000, 100);
+  set_PLL(true);
+  enable_parallel_port(1);
+}
+
+void write_parallel(int n)
+{
+  // disable parallel port
+  digitalWrite(TEN, LOW);
+
+  // write data to the parallel pins
   for (int i=0; i<16; i++) {
     if ((n>>i)&1)
       digitalWrite(D_pins[i], HIGH);
     else
       digitalWrite(D_pins[i], LOW);
   }
+
+  // enable parallel port
+  digitalWrite(TEN, HIGH);
 }
 
 void read_register(int reg)
@@ -296,13 +303,13 @@ void enable_parallel_port(bool ENABLE)
   for (int i=0; i<8; i++)
     data[i] = result[i];
 
-  // flip the "Parallel data port enable" bit
+  // flip the "Parallel data port enable" and "Data assembler hold last value" bits
   if (ENABLE == true) {
     digitalWrite(TEN, HIGH);
-    data[3] |= B00010000;
+    data[3] |= B01010000;
   } else {
     digitalWrite(TEN, LOW);
-    data[3] &= B11101111;
+    data[3] &= B10101111;
   }
 
   // write the new register values
