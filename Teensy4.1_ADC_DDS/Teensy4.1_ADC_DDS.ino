@@ -1,18 +1,18 @@
 #include <SPI.h>
 
-// ADS8681 pins
-const int CS_ADC = 38;
+#define IMXRT_GPIO6_DIRECT  (*(volatile uint32_t *)0x42000000)
+
+// AD4000 pins
+const int CS_ADC = 10;
 
 // AD9910 pins
-const int CS_DDS = 10;
+const int D_pins[] = {19,18,14,15,40,41,17,16,22,23,20,21,38,39,26,27};
+const int CS_DDS = 24;
+const int reset_pin = 35;
+const int powerdown_pin = 36;
+const int TEN = 37;
 const int IO_update_pin = 34;
-const int reset_pin = 22;
-const int powerdown_pin = 21;
-const int profile_pins[] = {40, 41};
-const int D_pins[] = {30, 29, 28, 25, 24, 9, 8, 7, 6, 5, 4, 15, 16, 17, 3, 2};
-const int F_pins[] = {32, 31};
-const int TEN = 36;
-const int PLL = 20;
+const int PLL = 33;
 
 // length of AD9910 internal registers
 const int reg_len[] = {4,4,4,4,4,6,6,4,2,4,4,8,8,4,8,8,8,8,8,8,8,8,4};
@@ -23,21 +23,20 @@ char result[8];
 // PID parameters
 int setpoint=40000, loop_delay=0;
 float Kp=0, Ki=0;
-int error, dds_out, accumulator;
+int error, accumulator;
+unsigned short dds_out;
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
+  SPI.begin();
 
   // SPI for talking to the ADC
   pinMode(CS_ADC, OUTPUT);
   digitalWrite(CS_ADC, HIGH);
-  SPI1.setMISO(39);
-  SPI1.begin();
 
   // SPI for talking to the DDS
   pinMode(CS_DDS, OUTPUT);
   digitalWrite(CS_DDS, HIGH);
-  SPI.begin();
 
   // other DDS pins
   pinMode(IO_update_pin, OUTPUT);
@@ -54,21 +53,15 @@ void setup() {
 
   pinMode(PLL, INPUT);
 
-  for (int i=0; i<2; i++) {
-    pinMode(F_pins[i], OUTPUT);
-    digitalWrite(F_pins[i], LOW);
-  }
-
   for (int i=0; i<16; i++) {
     pinMode(D_pins[i], OUTPUT);
     digitalWrite(D_pins[i], LOW);
   }
 
-  for (int i=0; i<2; i++)
-    pinMode(profile_pins[i], OUTPUT);
-
   // AD9910 defaults
   reset_DDS();
+
+  enable_parallel_port(0);
 }
 
 void loop() {
@@ -85,10 +78,11 @@ void loop() {
 //
 //  // write to parallel port
 //  write_parallel(dds_out);
-
-  // loop delay
-  delayMicroseconds(loop_delay);
-  write_parallel(Kp*read_ADC());
+//
+//  // loop delay
+//  delayMicroseconds(loop_delay);
+//  write_parallel(Kp*read_ADC());
+//  Serial.println(read_ADC());
 }
 
 void serialEvent()
@@ -98,7 +92,11 @@ void serialEvent()
 
     switch (cmd) {
       case '?':
-        Serial.print("Kp=");
+        Serial.print("PV=");
+        Serial.print(read_ADC());
+        Serial.print(", out=");
+        Serial.print(dds_out);
+        Serial.print(", Kp=");
         Serial.print(Kp);
         Serial.print(", Ki=");
         Serial.print(Ki);
@@ -106,16 +104,6 @@ void serialEvent()
         Serial.print(setpoint);
         Serial.print(", loop_delay=");
         Serial.println(loop_delay);
-        break;
-
-      // ADC commands
-
-      case 'r':
-        Serial.println(read_ADC());
-        break;
-
-      case 'R':
-        set_ADC_range(Serial.parseInt());
         break;
 
       // DDS commands
@@ -129,10 +117,6 @@ void serialEvent()
           Serial.println("PLL active.");
         else
           Serial.println("PLL not active.");
-        break;
-
-      case 'N':
-        set_PLL(Serial.parseInt());
         break;
 
       case 'P':
@@ -188,12 +172,8 @@ void write_parallel(int n)
   digitalWrite(TEN, LOW);
 
   // write data to the parallel pins
-  for (int i=0; i<16; i++) {
-    if ((n>>i)&1)
-      digitalWrite(D_pins[i], HIGH);
-    else
-      digitalWrite(D_pins[i], LOW);
-  }
+  IMXRT_GPIO6_DIRECT &= 0xffff;
+  IMXRT_GPIO6_DIRECT = (n << 16) | IMXRT_GPIO6_DIRECT;
 
   // enable parallel port
   digitalWrite(TEN, HIGH);
@@ -211,12 +191,8 @@ void read_register(int reg)
   
   // begin transaction
   SPI.beginTransaction(SPISettings(10000, MSBFIRST, SPI_MODE0));
-
-  // flash the IO_RESET (as well as the CS) to clear potential unfinished transactions
-  digitalWrite(CS_DDS, HIGH);
-  delay(5);
   digitalWrite(CS_DDS, LOW);
-  
+
   SPI.transfer(reg | B10000000);
 
   // read data
@@ -224,6 +200,7 @@ void read_register(int reg)
     result[i] = SPI.transfer(0x00);
 
   // end transaction
+  digitalWrite(CS_DDS, HIGH);
   SPI.endTransaction();
 }
 
@@ -231,10 +208,6 @@ void write_register(int reg, char data[])
 {
   // begin transaction
   SPI.beginTransaction(SPISettings(10000, MSBFIRST, SPI_MODE0));
-
-  // flash the IO_RESET (as well as the CS) to clear potential unfinished transactions
-  digitalWrite(CS_DDS, HIGH);
-  delayMicroseconds(5);
   digitalWrite(CS_DDS, LOW);
 
   // transfer data
@@ -250,6 +223,7 @@ void write_register(int reg, char data[])
   }
 
   // end transaction
+  digitalWrite(CS_DDS, HIGH);
   SPI.endTransaction();
 }
 
@@ -352,20 +326,10 @@ void set_PLL(bool ENABLE)
 
 unsigned short read_ADC()
 {
-  SPI1.beginTransaction(SPISettings(14000000, MSBFIRST, SPI_MODE0));
+  SPI.beginTransaction(SPISettings(18000000, MSBFIRST, SPI_MODE0));
   digitalWrite(CS_ADC, LOW);
-  const unsigned short data = SPI1.transfer16(0);
+  const unsigned short data = SPI.transfer16(0);
   digitalWrite(CS_ADC, HIGH);
-  SPI1.endTransaction();
+  SPI.endTransaction();
   return data;
-}
-
-void set_ADC_range(byte range)
-{
-  SPI1.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
-  digitalWrite(CS_ADC, LOW);
-  SPI1.transfer16(0xD014);
-  SPI1.transfer16(range);
-  digitalWrite(CS_ADC, HIGH);
-  SPI1.endTransaction();
 }

@@ -5,8 +5,8 @@ const int CSB = 10;
 
 // internal state
 byte data[4];
-long result[2];
-bool rdy[2];
+long result[3];
+bool rdy[3];
 bool enable_printing;
 
 void setup() {
@@ -53,6 +53,12 @@ void setup() {
                  0,       // setup 0
                  B00011,  // AINP
                  B00010); // AINM;
+
+  channel_config(1,       // enable
+                 2,       // channel 1
+                 0,       // setup 0
+                 B00001,  // AINP
+                 B00000); // AINM;
 }
 
 void serialEvent() {
@@ -136,7 +142,7 @@ void read_ADC()
 
   // verify valid channel received
   int ch = data[3] & B00001111;
-  if (!((ch==0) || (ch==1)))
+  if (!((ch==0) || (ch==1) || (ch=2)))
     return;
 
   // decode and store received value
@@ -147,17 +153,19 @@ void read_ADC()
 void print_ADC()
 {
   // check data is ready
-  for (int i=0; i<2; i++)
+  for (int i=0; i<3; i++)
     if (rdy[i] != true)
       return;
   
   // print out the data
   Serial.print(result[0]);
   Serial.print(',');
-  Serial.println(result[1]);
+  Serial.print(result[1]);
+  Serial.print(',');
+  Serial.println(result[2]);
 
   // clear "data ready" flags
-  for (int i=0; i<2; i++)
+  for (int i=0; i<3; i++)
     rdy[i] = false;
 }
 

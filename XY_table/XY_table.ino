@@ -87,7 +87,7 @@ class TB6600
         delayMicroseconds (dt);
       }
 
-      Serial.println(X);
+//      Serial.println(X);
     }
 
   private:
