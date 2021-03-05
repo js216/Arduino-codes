@@ -61,6 +61,10 @@ void serialEvent() {
         dt = Serial.parseFloat();
         break;
 
+      case 'D':
+        div_f = Serial.parseFloat();
+        break;
+
       case 'a':
         amp_f = Serial.parseFloat();
         break;

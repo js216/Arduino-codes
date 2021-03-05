@@ -19,7 +19,7 @@ void ADC_DAC_init()
   DAC_gain(HIGH);
 
   // configure the ADC
-  ADC_range();
+  ADC_range(0, 0, 2, 2);
   ADC_control(0);
 }
 
@@ -62,12 +62,16 @@ void serialEvent() {
         }
         break;
 
+      case 'R':
+        ADC_range(Serial.parseInt(), Serial.parseInt(),
+                  Serial.parseInt(), Serial.parseInt());
+        break;
     }
   }
 }
 
 void loop() {
-  ADC_read(default_ch);
+//  ADC_read(default_ch);
 }
 
 /************************************
@@ -149,13 +153,19 @@ void ADC_control(int ch)
   ADC_SPI(SPI_MODE1);
 }
 
-void ADC_range()
+void ADC_range(char vin0, char vin1, char vin2, char vin3)
 {
+  // vin = 0 means an input range of +/- 10 V
+  // vin = 1 means an input range of +/- 5 V
+  // vin = 2 means an input range of +/- 2.5 V
+  // vin = 3 means an input range of 0 to 10 V
+  
   data[0]  = (1 << 7); // write ...
   data[0] |= (1 << 5); // ... to the range register;
-  data[0] |= (1 << 3); // select +/- 2.5V  for VIN0
-  data[0] |= (1 << 1); // select +/- 2.5V  for VIN1
-  data[0] |= (1 << 0); // select +/- 2.5V for VIN2
-  data[1]  = (1 << 6); // select +/- 2.5V for VIN3
+  data[0] |= (vin0 << 3);
+  data[0] |= (vin1 << 1);
+  data[0] |= (vin2 >> 1);
+  data[1]  = ((vin2 & 1) << 7);
+  data[1] |= (vin3 << 5);
   ADC_SPI(SPI_MODE1);
 }
