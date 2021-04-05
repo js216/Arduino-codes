@@ -1,5 +1,6 @@
 #include <SPI.h>
 #include <Encoder.h>
+#include <EEPROM.h>
 
 // pin configuration
 const int CSB = 10;
@@ -8,22 +9,27 @@ const int enc_B = 3;
 const int button = 4;
 const int LED[] = {0, 5, 6, 7, 8};
 
+// for SPI communication
+byte data[3];
+
 // for rotary encoder and its button
 Encoder Enc(enc_B, enc_A);
 const long inc[] = {0, 500, 50, 5, 1};
 int btn_cur=HIGH, btn_prev=HIGH;
 long btn_t = 0;
 
-// state variables
-int state = 0;
-long st_val[] = {0, 0, 0, 0, 0};
-long setpoint = 0;
-
 // ADC readout
 int ADC_ch_val[] = {0, 0};
 
-// for SPI communication
-byte data[3];
+// for EEPROM
+const int state_addr = 0;
+const int setpoint_addr = 1;
+const int st_val_addr = 5;
+
+// state variables
+int state = 0;
+long setpoint = 0;
+long st_val[] = {0, 0, 0, 0, 0};
 
 void setup() {
   Serial.begin(9600);
@@ -44,6 +50,14 @@ void setup() {
   ADC_config(1, 0);           // enable internal reference
   ADC_channels(1, 1, 0, 0);   // select channels 0 and 1
   ADC_auto_mode();
+
+  // restore values from EEPROM
+  state = EEPROM.read(state_addr);
+  digitalWrite(LED[state], HIGH);
+  setpoint = EEPROM_to_long(setpoint_addr);
+  DAC_write(setpoint);
+  for (int state=0; state<5; state++)
+    st_val[state] = EEPROM_to_long(st_val_addr+4*state);
 }
 
 void serialEvent() {
@@ -63,19 +77,11 @@ void serialEvent() {
         setpoint = Serial.parseInt();
         Serial.println(setpoint);
         DAC_write(setpoint);
+        long_to_EEPROM(setpoint_addr, setpoint);
         break;
 
       case 'g':
         DAC_gain(Serial.parseInt());
-        break;
-
-      case 'R':
-        for (long i=0; i<65535; i++) {
-          if (i % 10 == 0) {
-            DAC_write(i);
-          }
-        }
-        Serial.println("Ramp done.");
         break;
 
       // ADC FUNCTIONS
@@ -89,6 +95,26 @@ void serialEvent() {
         ADC_channels(1, 1, 0, 0);   // select all channels
         ADC_auto_mode();
         break;
+
+      // EEPROM FUNCTIONS
+
+      case 'C':
+        Serial.print("Clearing EEPROM ... ");
+        clear_EEPROM();
+        Serial.println("done.");
+        break;
+
+      case 'R':
+          Serial.print(state);
+          Serial.print(",");
+          Serial.print(setpoint);
+          Serial.print(",");
+          for (int i=0; i<5; i++) {
+            Serial.print(st_val[i]);
+            Serial.print(",");
+          }
+          Serial.print('\n');
+          break;
     }
   }
 }
@@ -100,6 +126,7 @@ void loop() {
     if (btn_cur == LOW) {
       digitalWrite(LED[state], LOW);
       state = (state + 1) % 5;
+      EEPROM.write(state_addr, state);
       digitalWrite(LED[state], HIGH);
     }
     btn_prev = btn_cur;
@@ -138,11 +165,41 @@ void increment_setpoint()
   else
     st_val[state] -= enc_val/abs(enc_val);
 
-  // write new setpoint to the DA
+  // write new setpoint to the DAC
   DAC_write(setpoint);
+
+  // record new values to EEPROM
+  long_to_EEPROM(setpoint_addr, setpoint);
+  long_to_EEPROM(st_val_addr+4*state, st_val[state]);
 
   // resume encoder operation
   interrupts();
+}
+
+/************************************
+ * EEPROM FUNCTIONS
+ ***********************************/
+
+void long_to_EEPROM(const int addr, const long val)
+{
+  for (int i=0; i<4; i++)
+    EEPROM.write( addr+i, (val>>(i*8)) );
+}
+
+long EEPROM_to_long(const int addr)
+{
+  long val = 0;
+  
+  for (int i=0; i<4; i++)
+    val += EEPROM.read(addr+i) << (i*8);
+
+  return val;
+}
+
+void clear_EEPROM()
+{
+  for (int i=0; i<EEPROM.length(); i++)
+    EEPROM.write(i, 0);
 }
   
 /************************************
