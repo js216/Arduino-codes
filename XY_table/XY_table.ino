@@ -60,10 +60,14 @@ class TB6600
       }
 
       for (; X !=NX; X=X+xt) {
-        // check for stop command
-        if (Serial.available() > 0)
-          if (Serial.read() == '0')
+        // check for serial commands
+        if (Serial.available() > 0) {
+          char c = Serial.read();
+          if (c == '0')
             break;
+          if (c == 'q')
+            this->get_X();
+        }
         
         // execute the motion
         digitalWrite (X_STP_5v, HIGH);
@@ -140,8 +144,13 @@ void serialEvent()
         motor_y.zero();
         break;
 
+      case 'q':
+        Serial.println("Not moving.");
+        break;
+
       case '?':
         Serial.println("XY table ready.");
+        break;
     }
   }
 }
