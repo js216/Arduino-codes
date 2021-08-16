@@ -1,19 +1,29 @@
 #include <SPI.h>
+#include <Encoder.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
 // pin configuration
-const int ramp_trig  = 2;
+const int ramp_trig = 14;
 const int CS_DAC    = 8;
 const int CS_ADC    = 10;
 const int MISO_pin  = 12;
 const int MOSI_pin  = 11;
 const int SCK_pin   = 13;
+const int LED[]     = {0, 16, 17, 18, 19, 20, 21, 22, 23};
+const int enc_A     = 4;
+const int enc_B     = 3;
+const int enc_btn   = 2;
 
 // state variables
+int state = 0;
 unsigned int ADC_data[2];
 unsigned int DAC_data[3];
 volatile bool triggered = false;
+
+// for rotary encoder and its button
+Encoder Enc(enc_B, enc_A);
+int btn_cur=HIGH, btn_prev=HIGH;
 
 // peak detection constants
 const int peak_thr = 3100;
@@ -37,6 +47,10 @@ void setup() {
   pinMode(CS_ADC, OUTPUT);
   digitalWrite(CS_ADC, HIGH);
   pinMode(ramp_trig, INPUT);
+  pinMode(enc_btn, INPUT);
+  digitalWrite(enc_btn, HIGH);
+  for (int i=1; i<=8; i++)
+    pinMode(LED[i], OUTPUT);
 
   configure_ADC();
   configure_DAC();
@@ -51,9 +65,66 @@ void trig_ISR()
   triggered = true;
 }
 
-bool toggle_flag;
+void serialEvent() {
+  while (Serial.available()) {
+    // read user input
+    char c = (char)Serial.read();
+
+    // decide what to do with it
+    switch (c) {
+      case '?':
+        Serial.write("Lock board v2.2 ready.\n");
+        break;
+
+      case 'p':
+        print_ADC();
+        break;
+
+      case 'r':
+        set_ramp(Serial.parseInt(), Serial.parseInt(), Serial.parseInt());
+        break;
+        
+      case 's':
+        set_slave(Serial.parseInt() * 1000);
+        break;
+
+      // PID control
+
+      case 'e':
+        PID_enabled = Serial.parseInt();
+        accumulator = 5000;
+        break;
+
+      case 'S':
+        SP = Serial.parseInt();
+        break;
+
+      case 'i':
+        Ki = Serial.parseInt();
+        break;
+
+      case 'P':
+        printing_enabled = Serial.parseInt();
+        break;
+    }
+  }
+}
 
 void loop() {
+  print_ADC();
+  
+  // check for button press
+  btn_cur = digitalRead(enc_btn);
+  if (btn_cur != btn_prev) {
+    if (btn_cur == LOW) {
+      digitalWrite(LED[state], LOW);
+      state = (state + 1) % 9;
+      digitalWrite(LED[state], HIGH);
+    }
+    btn_prev = btn_cur;
+    delay(50);
+  }
+
   if (PID_enabled && triggered) {
     // clear triggered flag
     cli();
@@ -115,51 +186,6 @@ void loop() {
 }
 
 
-void serialEvent() {
-  while (Serial.available()) {
-    // read user input
-    char c = (char)Serial.read();
-
-    // decide what to do with it
-    switch (c) {
-      case '?':
-        Serial.write("Lock board v2.0 ready.\n");
-        break;
-
-      case 'p':
-        print_ADC();
-        break;
-
-      case 'r':
-        set_ramp(Serial.parseInt(), Serial.parseInt(), Serial.parseInt());
-        break;
-        
-      case 's':
-        set_slave(Serial.parseInt() * 1000);
-        break;
-
-      // PID control
-
-      case 'e':
-        PID_enabled = Serial.parseInt();
-        accumulator = 5000;
-        break;
-
-      case 'S':
-        SP = Serial.parseInt();
-        break;
-
-      case 'i':
-        Ki = Serial.parseInt();
-        break;
-
-      case 'P':
-        printing_enabled = Serial.parseInt();
-        break;
-    }
-  }
-}
-
 /////////////////////////////////
 /// ADC FUNTIONS ///////////////
 /////////////////////////////////
@@ -167,9 +193,9 @@ void serialEvent() {
 void print_ADC()
 {
   read_ADC();
-  Serial.print(ADC_data[0]);
-  Serial.print(", ");
-  Serial.println(ADC_data[1]);
+  Serial.println(ADC_data[0]);
+//  Serial.print(", ");
+//  Serial.println(ADC_data[1]);
 }
 
 void read_ADC()
