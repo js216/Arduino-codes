@@ -23,13 +23,13 @@ volatile bool triggered = false;
 
 // for rotary encoder and its button
 Encoder Enc(enc_B, enc_A);
-int btn_cur=HIGH, btn_prev=HIGH;
+int btn_cur = HIGH, btn_prev = HIGH;
 
 // peak detection constants
 const int peak_thr = 3100;
 
 // PID variables
-bool PID_enabled=0, printing_enabled=1;
+bool PID_enabled = 0, printing_enabled = 1;
 int Ki = 1;
 int SP = 75;
 int accumulator = 14500;
@@ -49,7 +49,7 @@ void setup() {
   pinMode(ramp_trig, INPUT);
   pinMode(enc_btn, INPUT);
   digitalWrite(enc_btn, HIGH);
-  for (int i=1; i<=8; i++)
+  for (int i = 1; i <= 8; i++)
     pinMode(LED[i], OUTPUT);
 
   configure_ADC();
@@ -79,13 +79,17 @@ void serialEvent() {
       case 'p':
         print_ADC();
         break;
+        
+      case 'c':
+        configure_DAC();
+        break;
 
       case 'r':
         set_ramp(Serial.parseInt(), Serial.parseInt(), Serial.parseInt());
         break;
-        
+
       case 's':
-        set_slave(Serial.parseInt() * 1000);
+        set_slave(Serial.parseInt() * 100);
         break;
 
       // PID control
@@ -111,8 +115,6 @@ void serialEvent() {
 }
 
 void loop() {
-  print_ADC();
-  
   // check for button press
   btn_cur = digitalRead(enc_btn);
   if (btn_cur != btn_prev) {
@@ -132,17 +134,17 @@ void loop() {
     sei();
 
     // reset state variables
-    int P1_up=0, P1_down=0, P2_up=0, P2_down=0;
+    int P1_up = 0, P1_down = 0, P2_up = 0, P2_down = 0;
 
     // enumerate datapoints
-    for (int i=0; i<65000; i++) {
+    for (int i = 0; i < 65000; i++) {
       // check if triggered again
       if (triggered)
         break;
 
       // get a new datapoint
       read_ADC();
-      
+
       // record time of Peak 1 rising
       if ((!P1_up) && (ADC_data[0] > peak_thr))
         P1_up = i;
@@ -193,16 +195,16 @@ void loop() {
 void print_ADC()
 {
   read_ADC();
+  Serial.println(ADC_data[1]);
+  Serial.print(", ");
   Serial.println(ADC_data[0]);
-//  Serial.print(", ");
-//  Serial.println(ADC_data[1]);
 }
 
 void read_ADC()
 {
   SPI.beginTransaction(SPISettings(100000, MSBFIRST, SPI_MODE0));
   digitalWrite(CS_ADC, LOW);
-  for (int i=0; i<2; i++)
+  for (int i = 0; i < 2; i++)
     ADC_data[i] = SPI.transfer16(0);
   digitalWrite(CS_ADC, HIGH);
   SPI.endTransaction();
@@ -214,7 +216,7 @@ void configure_ADC()
   int config2 = (1 << 15); // write to ...
   config2    |= (1 << 13); // .. the register CONFIGURATION2
   config2    |= (1 << 8);  // enable 1-wire mode
-  
+
   // transmit data
   SPI.beginTransaction(SPISettings(100000, MSBFIRST, SPI_MODE0));
   digitalWrite(CS_ADC, LOW);
@@ -236,7 +238,7 @@ void set_ramp(const unsigned int ramp_min, const unsigned int ramp_max,
   // resulting in a positive ramp. However, ramp_slope must be smaller than
   // ramp_min from which it's subtracted.
   if (ramp_min < ramp_slope)
-   return;
+    return;
 
   // write values to DAC
   write_DAC(0, ramp_max);
@@ -279,7 +281,7 @@ void DAC_SPI()
 {
   SPI.beginTransaction(SPISettings(100000, MSBFIRST, SPI_MODE0));
   digitalWrite(CS_DAC, LOW);
-  for (int i=0; i<3; i++)
+  for (int i = 0; i < 3; i++)
     SPI.transfer(DAC_data[i]);
   digitalWrite(CS_DAC, HIGH);
   SPI.endTransaction();
