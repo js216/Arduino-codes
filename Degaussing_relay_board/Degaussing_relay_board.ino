@@ -1,22 +1,17 @@
-// pin configuration
-#define R1 _BV(PB1)
-#define R2 _BV(PB0)
-#define R3 _BV(PD7)
-#define R4 _BV(PD6)
-#define R5 _BV(PD5)
-#define R6 _BV(PD4)
-#define R7 _BV(PD3)
-#define R8 _BV(PD2)
-
 const int relay_delay = 10;
+
+const int R1=2, R2=3, R3=4, R4=5, R5=6;
 
 void setup() {
   Serial.begin(9600);
 
-  DDRB = R1 | R2;
-  DDRD = R3 | R4 | R5 | R6 | R7 | R8;
-  PORTB = 0;
-  PORTD = 0;
+  pinMode(R1, OUTPUT);
+  pinMode(R2, OUTPUT);
+  pinMode(R3, OUTPUT);
+  pinMode(R4, OUTPUT);
+  pinMode(R5, OUTPUT);
+
+  clear_all();
 }
 
 void serialEvent() {
@@ -32,45 +27,30 @@ void serialEvent() {
       case '1':
         clear_all();
         delay(relay_delay);
-        PORTB = R1;
+        digitalWrite(R5, HIGH);
         break;
       case '2':
         clear_all();
         delay(relay_delay);
-        PORTB = R2;
+        digitalWrite(R5, HIGH);
         break;
       case '3':
         clear_all();
         delay(relay_delay);
-        PORTD = R3;
+        digitalWrite(R5, HIGH);
         break;
       case '4':
         clear_all();
         delay(relay_delay);
-        PORTD = R4;
+        digitalWrite(R5, HIGH);
         break;
       case '5':
         clear_all();
         delay(relay_delay);
-        PORTD = R5;
-        break;
-      case '6':
-        clear_all();
-        delay(relay_delay);
-        PORTD = R6;
-        break;
-      case '7':
-        clear_all();
-        delay(relay_delay);
-        PORTD = R7;
-        break;
-      case '8':
-        clear_all();
-        delay(relay_delay);
-        PORTD = R8;
+        digitalWrite(R5, HIGH);
         break;
       case '?':
-        Serial.write("Degaussing relay board v1.2 ready.\n");
+        Serial.write("Degaussing relay board v1.3 ready.\n");
         break;
     }
   }
@@ -78,8 +58,11 @@ void serialEvent() {
 
 void clear_all()
 {
-  PORTB = 0;
-  PORTD = 0;
+  digitalWrite(R1, LOW);
+  digitalWrite(R2, LOW);
+  digitalWrite(R3, LOW);
+  digitalWrite(R4, LOW);
+  digitalWrite(R5, LOW);
 }
 
 void loop() {
