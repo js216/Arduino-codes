@@ -40,14 +40,10 @@ void loop() {
         enable_all();
         break;
       case 'e':
-        ch = Serial.parseInt()-1;
-        Serial.println(R[ch]);
-        digitalWrite(R[ch], HIGH);
+        digitalWrite(R[Serial.parseInt()-1], HIGH);
         break;
       case 'd':
-        ch = Serial.parseInt()-1;
-        Serial.println(R[ch]);
-        digitalWrite(R[ch], LOW);
+        digitalWrite(R[Serial.parseInt()-1], LOW);
         break;
       case '?':
         Serial.print("Shim_relays v1.0 ready.\n");
