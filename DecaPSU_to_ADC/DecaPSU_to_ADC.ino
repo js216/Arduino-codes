@@ -8,6 +8,7 @@ const int SCK_pin   = 13;
 
 // state variables
 byte ADC_data[5];
+int readings[15];
 
 void setup() {
   Serial.begin(9600);
@@ -20,7 +21,14 @@ void setup() {
   pinMode(CS_ADC, OUTPUT);
   digitalWrite(CS_ADC, HIGH);
 
-  configure_ADC();
+  // enable all channels
+  for (int i=0; i<16; i++)
+    set_ADC_ch(i,1);
+
+  set_ADC_setup();
+  set_ADC_filter();
+  set_ADC_mode();
+  set_ADC_interface();
 }
 
 void serialEvent() {
@@ -31,7 +39,9 @@ void serialEvent() {
     // decide what to do with it
     switch (c) {
       case '?':
-        Serial.write("DecaPSU to ADC v2.0 ready.\n");
+        Serial.write("DecaPSU to ADC (");
+        print_ADC_ID();
+        Serial.write(") v2.0 ready.\n");
         break;
 
       case 's':
@@ -46,6 +56,40 @@ void serialEvent() {
 }
 
 void loop() {
+  for (int i=0; i<10; i++) {
+    readout_ADC();
+    delay(1);
+  }
+
+  Serial.print(get_ADC_voltage(13));
+  Serial.write(", ");
+  Serial.print(get_ADC_voltage(14));
+  Serial.write(", ");
+  Serial.print(get_ADC_voltage(0));
+  Serial.write(", ");
+  
+  Serial.print(get_ADC_voltage(1));
+  Serial.write(", ");
+  Serial.print(get_ADC_voltage(2));
+  Serial.write(", ");
+  Serial.print(get_ADC_voltage(3));
+  Serial.write(", ");
+    
+  Serial.print(get_ADC_voltage(10));
+  Serial.write(", ");
+  Serial.print(get_ADC_voltage(12));
+  Serial.write(", ");
+  Serial.print(get_ADC_voltage(11));
+  Serial.write(", ");
+      
+  Serial.print(get_ADC_voltage(8));
+  Serial.write(", ");
+  Serial.print(get_ADC_voltage(7));
+  Serial.write(", ");
+  Serial.print(get_ADC_voltage(9));
+  Serial.write(", ");
+  
+  Serial.write("\n");
 }
 
 
@@ -71,7 +115,7 @@ void print_ADC_ID()
 
   Serial.print("0x");
   Serial.print((ADC_data[1]<<4) + (ADC_data[2]>>4), HEX);
-  Serial.println('X');
+  Serial.print('X');
 }
 
 void print_ADC_register(byte reg, unsigned int len)
@@ -147,19 +191,7 @@ void set_ADC_interface()
   write_ADC(3);
 }
 
-void configure_ADC()
-{
-  // disable all channels (seems ch0 is active by default nonetheless)
-  for (int i=0; i<16; i++)
-    set_ADC_ch(i,0);
-  
-  set_ADC_setup();
-  set_ADC_filter();
-  set_ADC_mode();
-  set_ADC_interface();
-}
-
-void print_ADC_data()
+void readout_ADC()
 {
   // read from the data register
   ADC_data[0] = (1 << 6) + 0x04;
@@ -171,10 +203,21 @@ void print_ADC_data()
   // combine three bytes into one variable
   int val_i = (ADC_data[1] << 16) + (ADC_data[2] << 8) + ADC_data[3];
 
-  // convert to voltage
-  float val_f = 25 * (val_i/pow(2,23) - 1);
+  // store into array for later use
+  readings[ch] = val_i;
+}
 
-  Serial.print(ch);
-  Serial.print(" : ");
-  Serial.println(val_f);
+float get_ADC_voltage(const int ch)
+{
+  // convert into voltage
+  return 25 * (readings[ch]/pow(2,23) - 1);
+}
+
+void print_ADC_data()
+{
+  for (int ch=0; ch<15; ch++) {
+    Serial.print(get_ADC_voltage(ch));
+    Serial.write(", ");
+  }
+  Serial.write("\n");
 }
