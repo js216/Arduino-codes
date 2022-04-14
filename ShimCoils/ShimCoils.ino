@@ -23,7 +23,7 @@ void serialEvent() {
     // decide what to do with it
     switch (c) {
       case '?':
-        Serial.write("Shim coils v1.3a, board A, ready.\n");
+        Serial.write("Shim coils v1.3a, board B, ready.\n");
         break;
 
       case 's':
