@@ -6,6 +6,7 @@ const int CS[] = {2, 4, 6, 3, 5, 7};
 // internal state
 byte data[4];
 long result[6][4];
+long offs[6][4];
 bool rdy[6][4];
 bool enable_printing;
 int gain = 0;
@@ -46,45 +47,45 @@ void setup() {
                 0,       // reject 60 Hz
                 3,       // post filter
                 1,       // SINGLE_CYCLE
-                384);    // FS (from 1 to 2047)
+                1);      // FS (from 1 to 2047)
   
     channel_config(CS_i,
                    1,        // enable
                    0,        // channel 0
                    0,        // setup 0
-                   0b00001,  // AINP
-                   0b00000); // AINM;
+                   0b00000,  // AINP
+                   0b00001); // AINM;
   
     channel_config(CS_i,
                    1,        // enable
                    1,        // channel 1
                    0,        // setup 0
-                   0b00011,  // AINP
-                   0b00010); // AINM;
+                   0b00010,  // AINP
+                   0b00011); // AINM;
   
     channel_config(CS_i,
                    1,        // enable
                    2,        // channel 2
                    0,        // setup 0
-                   0b00101,  // AINP
-                   0b00111); // AINM;
+                   0b00100,  // AINP
+                   0b00101); // AINM;
                    
     channel_config(CS_i,
                    1,        // enable
                    3,        // channel 3
                    0,        // setup 0
-                   0b00100,  // AINP
-                   0b00110); // AINM;
+                   0b00110,  // AINP
+                   0b00111); // AINM;
                    
   }
 }
 
 void loop() {
-  for (int CS_i=0; CS_i<6; CS_i++) {
+  for (int CS_i=0; CS_i<6; CS_i++)
     read_ADC(CS_i);
-    if (enable_printing)
-      print_ADC(CS_i, 0);
-  }
+    
+  if (enable_printing)
+    print_ADC(0);
 
   while (Serial.available()) {
     // read user input
@@ -111,8 +112,13 @@ void loop() {
         break;
         
       case 'r':
+        print_ADC(1);
+        break;
+
+      case 'o':
         for (int CS_i=0; CS_i<6; CS_i++)
-          print_ADC(CS_i, 1);
+          for (int i=0; i<15; i++)
+            offs[CS_i][i] = result[CS_i][i];
         break;
               
       case 'f':
@@ -182,38 +188,46 @@ void read_ADC(const int CS_i)
   rdy[CS_i][ch] = true;
 }
 
-void print_ADC(const int CS_i, bool print_voltage)
+void print_ADC(bool print_voltage)
 {
   // check data is ready
-  for (int i=0; i<4; i++)
-    if (rdy[CS_i][i] != true) {
-      Serial.println("data not ready");
-      return;
+  for (int CS_i=0; CS_i<6; CS_i++)
+    for (int i=0; i<4; i++)
+      if (rdy[CS_i][i] != true)
+        return;
+  
+  // print out the data
+  for (int CS_i=0; CS_i<6; CS_i++) {
+    // convert ADC value to voltage
+    if (print_voltage) {
+    float ADC_to_V = 5 / (pow(2,24) * pow(2,gain));
+      Serial.print(ADC_to_V * result[CS_i][0]);
+      Serial.print(',');
+      Serial.print(ADC_to_V * result[CS_i][1]);
+      Serial.print(',');
+      Serial.print(ADC_to_V * result[CS_i][2]);
+      Serial.print(',');
+      Serial.print(ADC_to_V * result[CS_i][3]);
+    } else {
+      Serial.print(result[CS_i][0]-offs[CS_i][0]);
+      Serial.print(',');
+      Serial.print(result[CS_i][1]-offs[CS_i][1]);
+      Serial.print(',');
+      Serial.print(result[CS_i][2]-offs[CS_i][2]);
+      Serial.print(',');
+      Serial.print(result[CS_i][3]-offs[CS_i][3]);
     }
-
-  // convert ADC value to voltage
-  if (print_voltage) {
-  float ADC_to_V = 5 / (pow(2,24) * pow(2,gain));
-    Serial.print(ADC_to_V * result[CS_i][0]);
+  
+    // print newline or comma
+    if (CS_i == 5)
+      Serial.print('\n');
+    else
     Serial.print(',');
-    Serial.print(ADC_to_V * result[CS_i][1]);
-    Serial.print(',');
-    Serial.print(ADC_to_V * result[CS_i][2]);
-    Serial.print(',');
-    Serial.println(ADC_to_V * result[CS_i][3]);
-  } else {
-    Serial.print(result[CS_i][0]);
-    Serial.print(',');
-    Serial.print(result[CS_i][1]);
-    Serial.print(',');
-    Serial.print(result[CS_i][2]);
-    Serial.print(',');
-    Serial.println(result[CS_i][3]);
+  
+    // clear "data ready" flags
+    for (int i=0; i<4; i++)
+      rdy[CS_i][i] = false;
   }
-
-  // clear "data ready" flags
-  for (int i=0; i<4; i++)
-    rdy[CS_i][i] = false;
 }
 
 /***********************************************************
