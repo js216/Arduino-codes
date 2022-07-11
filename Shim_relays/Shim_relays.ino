@@ -45,9 +45,23 @@ void loop() {
       case 'd':
         digitalWrite(R[Serial.parseInt()-1], LOW);
         break;
-      case '?':
-        Serial.print("Shim_relays v1.0 ready.\n");
+      case 't':
+        test_relays();
         break;
-    }
+      case '?':
+        Serial.print("Shim_relays v1.0 ready. Board C.\n");
+        break;
+    } 
+  }
+}
+
+void test_relays()
+{
+  delay(500);
+  for (int i=0; i<16; i++) {
+    digitalWrite(R[i], HIGH);
+    delay(100);
+    digitalWrite(R[i], LOW);
+    delay(100);
   }
 }
