@@ -1,4 +1,4 @@
-#include <SPI.h>
+ #include <SPI.h>
 
 // pin configuration
 const int CS[] = {2, 4, 6, 3, 5, 7};
@@ -18,7 +18,7 @@ void setup() {
   
   for (int CS_i=0; CS_i<6; CS_i++) {
     pinMode(CS[CS_i], OUTPUT);
-    digitalWrite(CS[CS_i], HIGH);
+    digitalWrite(CS[CS_i], LOW);
 
     ADC_config(CS_i,
                0,      // DOUT_RDY_DEL
@@ -94,7 +94,7 @@ void loop() {
     // decide what to do with it
     switch (c) {
       case '?':
-        Serial.print("MultiADC v1.0 ready (");
+        Serial.print("MultiADC v1.0 ready, board B (");
         for (int CS_i=0; CS_i<6; CS_i++) {
           Serial.print("0x0");
           identify_ADC(CS_i);
@@ -304,7 +304,7 @@ void write_SPI(const int CS_i, const byte operation, const byte reg, const unsig
 {
   // begin transaction
   SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE3));
-  digitalWrite(CS[CS_i], LOW);
+  digitalWrite(CS[CS_i], HIGH);
   delayMicroseconds(5); // needed because SI8380P-IUR has a 4us propagation delay
 
   // send read/write command
@@ -314,6 +314,6 @@ void write_SPI(const int CS_i, const byte operation, const byte reg, const unsig
   SPI.transfer(data, len);
 
   // end transaction
-  digitalWrite(CS[CS_i], HIGH);
+  digitalWrite(CS[CS_i], LOW);
   SPI.endTransaction();
 }
