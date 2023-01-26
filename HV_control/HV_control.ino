@@ -87,6 +87,10 @@ void check_serial()
      case 'a':
         printout_ADC();
         break;
+        
+     case 'd':
+        set_DAC(Serial.parseInt()*100);
+        break;
     }
   }
 }
@@ -135,6 +139,13 @@ void printout_ADC()
   Serial.println(values[num_ch-1]);
 }
 
+void set_DAC(int val)
+{
+  data[0] = val >> 8;
+  data[1] = val;
+  write_SPI_DAC();
+}
+
 /***********************************************************
  * CONFIGURATION FUNCTIONS
  ***********************************************************/
@@ -156,5 +167,19 @@ void write_SPI_ADC()
 
   // end transaction
   digitalWrite(CS_ADC, HIGH);
+  SPI.endTransaction();
+}
+
+void write_SPI_DAC()
+{
+  // begin transaction
+  SPI.beginTransaction(SPISettings(1000000, MSBFIRST, SPI_MODE0));
+  digitalWrite(CS_DAC, LOW);
+
+  // send or receive data
+  SPI.transfer(data, 2);
+
+  // end transaction
+  digitalWrite(CS_DAC, HIGH);
   SPI.endTransaction();
 }
