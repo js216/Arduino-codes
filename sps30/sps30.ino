@@ -1,5 +1,12 @@
 #include <sps30.h>
 
+// internal state
+struct sps30_measurement m;
+unsigned long previousMillis = 0;
+
+// constants
+const int update_interval = 1000;
+
 void setup() {
   int16_t ret;
   const uint8_t auto_clean_days = 4;
@@ -22,7 +29,7 @@ void setup() {
     Serial.println(ret);
   }
 
-  // start hte measurement
+  // start the measurement
   ret = sps30_start_measurement();
   if (ret < 0) {
     Serial.print("error starting measurement\n");
@@ -31,9 +38,37 @@ void setup() {
   delay(1000);
 }
 
+void check_serial()
+{
+  while (Serial.available()) {
+    // read user input
+    char c = (char)Serial.read();
+
+    // decide what to do with it
+    switch (c) {
+      case '?':
+        Serial.println("SPS30_mounting v1.0 ready.");
+        break;
+
+       case 'r':
+        printout_measurements();
+        break;
+    }
+  }
+}
+
 void loop() {
-  struct sps30_measurement m;
-  char serial[SPS30_MAX_SERIAL_LEN];
+  check_serial();
+
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= update_interval) {
+    previousMillis = currentMillis;
+    read_sensor();
+  }
+}
+
+void read_sensor()
+{
   uint16_t data_ready;
   int16_t ret;
 
@@ -52,30 +87,28 @@ void loop() {
 
   // read the measurement
   ret = sps30_read_measurement(&m);
-  if (ret < 0) {
+  if (ret < 0)
     Serial.print("error reading measurement\n");
-  } else {
-    // print out the mass concentrations
+}
+
+void printout_measurements()
+{
     Serial.print(m.mc_1p0);
     Serial.print(",");
     Serial.print(m.mc_2p5);
     Serial.print(",");
     Serial.print(m.mc_4p0);
     Serial.print(",");
-    Serial.println(m.mc_10p0);
+    Serial.print(m.mc_10p0);
 
-    // print out the number concentrations
-//    Serial.print(",");
-//    Serial.print(m.nc_0p5);
-//    Serial.print(",");
-//    Serial.print(m.nc_1p0);
-//    Serial.print(",");
-//    Serial.print(m.nc_2p5);
-//    Serial.print(",");
-//    Serial.print(m.nc_4p0);
-//    Serial.print(",");
-//    Serial.println(m.nc_10p0);
-  }
-
-  delay(1000);
+    Serial.print(",");
+    Serial.print(m.nc_0p5);
+    Serial.print(",");
+    Serial.print(m.nc_1p0);
+    Serial.print(",");
+    Serial.print(m.nc_2p5);
+    Serial.print(",");
+    Serial.print(m.nc_4p0);
+    Serial.print(",");
+    Serial.println(m.nc_10p0);
 }
