@@ -34,8 +34,6 @@ void setup() {
   if (ret < 0) {
     Serial.print("error starting measurement\n");
   }
-
-  delay(1000);
 }
 
 void check_serial()
