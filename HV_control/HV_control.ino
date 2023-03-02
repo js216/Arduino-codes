@@ -23,15 +23,16 @@ void setup() {
   SPI.begin();
 
   pinMode(CS_ADC, OUTPUT);
-  digitalWrite(CS_ADC, HIGH);
   pinMode(CS_DAC, OUTPUT);
-  digitalWrite(CS_DAC, HIGH);
-  pinMode(polarity_control, OUTPUT);
-  digitalWrite(polarity_control, LOW);
-  pinMode(HV_enable, OUTPUT);
-  digitalWrite(HV_enable, LOW);
   pinMode(relay_ctl, OUTPUT);
-  digitalWrite(relay_ctl, LOW);
+  pinMode(HV_enable, OUTPUT);
+  pinMode(polarity_control, OUTPUT);
+
+  digitalWrite(CS_ADC, HIGH);
+  digitalWrite(CS_DAC, HIGH);
+  digitalWrite(relay_ctl, HIGH);
+  digitalWrite(HV_enable, HIGH);
+  digitalWrite(polarity_control, HIGH);
 }
 
 void loop() {
@@ -59,7 +60,7 @@ void check_serial()
     // decide what to do with it
     switch (c) {
       case '?':
-        Serial.println("HV_control v1.2 ready.");
+        Serial.println("HV_control v1.3 ready.");
         break;
         
       case 'p':
