@@ -1,4 +1,7 @@
- #include <SPI.h>
+#include <SPI.h>
+
+// choose which board we're programming
+#define BOARD_A
 
 // pin configuration
 const int CS_ADC = 3;
@@ -13,6 +16,14 @@ bool printing=false;
 int ch=0;
 long values[5];
 unsigned long previousMillis = 0;
+bool reading=true;
+
+// for sine wave output
+bool sine=false;
+long int t=0;
+int f0=1;
+int amp=1000;
+int offs=5000;
 
 // constants
 const int update_interval = 200;
@@ -32,22 +43,29 @@ void setup() {
   digitalWrite(CS_DAC, HIGH);
   digitalWrite(relay_ctl, HIGH);
   digitalWrite(HV_enable, HIGH);
-  digitalWrite(polarity_control, HIGH);
+  #ifdef BOARD_A
+     digitalWrite(polarity_control, HIGH);
+  #endif
+  #ifdef BOARD_B
+     digitalWrite(polarity_control, LOW);
+  #endif
 }
 
 void loop() {
   check_serial();
 
-  if (printing) {
+  if (reading) {
     unsigned long currentMillis = millis();
     if (currentMillis - previousMillis >= update_interval) {
       previousMillis = currentMillis;
       values[ch] = read_ADC(ch);
       ch = (ch + 1) % num_ch;
-  
-      if ((ch%num_ch) == 0)
-        printout_ADC();
     }
+  }
+
+  if (sine) {
+    set_DAC( int(amp*sin(f0*t/100000.0) + offs) );
+    t++;
   }
 }
 
@@ -60,31 +78,56 @@ void check_serial()
     // decide what to do with it
     switch (c) {
       case '?':
-        Serial.println("HV_control v1.3 ready.");
+        #ifdef BOARD_A
+           Serial.println("HV_control v1.3 ready. Board A.");
+        #endif
+        #ifdef BOARD_B
+           Serial.println("HV_control v1.3 ready. Board B.");
+        #endif
         break;
         
       case 'p':
         digitalWrite(polarity_control, Serial.parseInt());
         break;
 
+      case 'P':
+        Serial.println(digitalRead(polarity_control));
+        break;
+
       case 'h':
         digitalWrite(HV_enable, Serial.parseInt());
         break;
-        
-      case 'r':
-        digitalWrite(relay_ctl, Serial.parseInt());
+
+      case 'H':
+        Serial.println(digitalRead(HV_enable));
         break;
+        
+//      case 'r':
+//        digitalWrite(relay_ctl, Serial.parseInt());
+//        break;
         
      case 'a':
-        printing = Serial.parseInt();
+        printout_ADC();
         break;
 
-     case 'A':
-        read_ADC(Serial.parseInt());
-        break;
-        
+//     case 'A':
+//       reading = Serial.parseInt();
+//       break;
+//
+//     case 'S':
+//       sine = Serial.parseInt();
+//       f0 = Serial.parseInt();
+//       amp = Serial.parseInt();
+//       offs = Serial.parseInt();
+//       break;
+
      case 'd':
-        set_DAC(Serial.parseInt());
+        #ifdef BOARD_A
+           set_DAC(0.961*Serial.parseInt());
+        #endif
+        #ifdef BOARD_B
+           set_DAC(0.726*Serial.parseInt());
+        #endif
         break;
     }
   }
@@ -94,14 +137,18 @@ void check_serial()
  * DATA FUNCTIONS
  ***********************************************************/
 
+float ADC_to_volts(const long ADC_val)
+{
+  return ((float)ADC_val - 32768) / 65535 * (2 * 3 * 4.096);
+}
 
 void printout_ADC()
 {
   for (int i=0; i<num_ch-1; i++) {
-    Serial.print(values[i]);
+    Serial.print((values[i]));
     Serial.print(",");
   }
-  Serial.println(values[num_ch-1]);
+  Serial.println((values[num_ch-1]));
 }
 
 /***********************************************************
