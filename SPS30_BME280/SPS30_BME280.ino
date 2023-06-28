@@ -8,7 +8,7 @@ Adafruit_BME280 bme(BME_CS);
 // internal state
 struct sps30_measurement m;
 unsigned long previousMillis = 0;
-bool printing_enable = true;
+bool printing_enable = false;
 
 // constants
 const int update_interval = 1000;
