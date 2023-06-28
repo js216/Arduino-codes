@@ -1,3 +1,5 @@
 desktop.ini
 *.swp
 .ipynb_checkpoints
+*.hdf
+*.log
