@@ -8,6 +8,7 @@ Adafruit_BME280 bme(BME_CS);
 // internal state
 struct sps30_measurement m;
 unsigned long previousMillis = 0;
+bool printing_enable = true;
 
 // constants
 const int update_interval = 1000;
@@ -76,6 +77,9 @@ void loop() {
   if (currentMillis - previousMillis >= update_interval) {
     previousMillis = currentMillis;
     read_sensor();
+
+    if (printing_enable)
+      printout_measurements();
   }
 }
 
