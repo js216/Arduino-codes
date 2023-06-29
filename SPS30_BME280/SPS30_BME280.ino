@@ -92,10 +92,10 @@ void read_sensor()
   do {
     ret = sps30_read_data_ready(&data_ready);
     if (ret < 0) {
-      Serial.print("error reading data-ready flag: ");
-      Serial.println(ret);
+      ; // Serial.print("error reading data-ready flag: ");
+        // Serial.println(ret);
     } else if (!data_ready)
-      Serial.print("data not ready, no new measurement available\n");
+      ; // Serial.print("data not ready, no new measurement available\n");
     else
       break;
     delay(100); /* retry in 100ms */
@@ -104,7 +104,7 @@ void read_sensor()
   // read the measurement
   ret = sps30_read_measurement(&m);
   if (ret < 0)
-    Serial.print("error reading measurement\n");
+    ; // Serial.print("error reading measurement\n");
 }
 
 void printout_measurements()
